@@ -254,11 +254,9 @@
             <strong style="font-size:13px;">Edit-Code (kein Login nötig)</strong>
             <div class="board-tools" style="margin-top:10px">
               <input id="editCode" type="password" placeholder="Gemeinsamer Code (z.B. PT-ROADTRIP-2026)" style="flex:1;min-width:220px;border-radius:14px;font-weight:800">
-              <button id="btnEnableEdit" class="btn-small">🔓 Edit aktivieren</button>
-              <button id="btnDisableEdit" class="btn-small btn-danger" style="display:none">🔒 Sperren</button>
             </div>
             <div class="small-note" id="authNote">
-              Seite ist öffentlich lesbar. Bearbeiten geht nur mit eurem gemeinsamen Code.
+              Seite ist öffentlich lesbar. Tippt den Code → Edit wird automatisch aktiviert.
             </div>
           </div>
 
@@ -363,7 +361,7 @@
     const SUPABASE_URL = "https://uhlisovcranwtcuwtqde.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_ofS72jPaQKpER9XbHZdxxw_y1orhvDT";
 
-    // Gemeinsamer Code (muss mit Supabase Policy übereinstimmen!)
+    // Muss exakt mit deiner Supabase Policy übereinstimmen!
     const REQUIRED_EDIT_CODE = "PT-ROADTRIP-2026";
 
     const stops = [
@@ -381,7 +379,6 @@
      ***********************/
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // edit state
     let editEnabled = false;
     let currentEditCode = "";
 
@@ -626,12 +623,12 @@
       }
 
       if(act === "edit"){
-        if(!editEnabled){ alert("🔒 Read-only. Erst Edit-Code aktivieren."); return; }
+        if(!editEnabled){ alert("🔒 Read-only. Code ist nicht korrekt."); return; }
         openModal("edit", it);
       }
 
       if(act === "del"){
-        if(!editEnabled){ alert("🔒 Read-only. Erst Edit-Code aktivieren."); return; }
+        if(!editEnabled){ alert("🔒 Read-only. Code ist nicht korrekt."); return; }
         const ok = confirm("Wirklich löschen?");
         if(!ok) return;
         await deleteItem(it.id);
@@ -671,7 +668,7 @@
 
     btnAdd.addEventListener("click", () => {
       if(!editEnabled){
-        alert("🔒 Read-only. Erst Edit-Code aktivieren.");
+        alert("🔒 Read-only. Code ist nicht korrekt.");
         return;
       }
       openModal("add");
@@ -681,7 +678,7 @@
 
     btnSave.addEventListener("click", async () => {
       if(!editEnabled){
-        alert("🔒 Read-only. Erst Edit-Code aktivieren.");
+        alert("🔒 Read-only. Code ist nicht korrekt.");
         return;
       }
       const payload = {
@@ -706,7 +703,7 @@
 
     btnDelete.addEventListener("click", async () => {
       if(!editEnabled){
-        alert("🔒 Read-only. Erst Edit-Code aktivieren.");
+        alert("🔒 Read-only. Code ist nicht korrekt.");
         return;
       }
       const ok = confirm("Wirklich löschen?");
@@ -734,32 +731,30 @@
     }
 
     function prettyDbError(error){
-      const msg = (error && (error.message || error.details || error.hint)) ? (error.message || error.details || error.hint) : "Unbekannter Fehler";
-      return msg;
+      return (error && (error.message || error.details || error.hint))
+        ? (error.message || error.details || error.hint)
+        : "Unbekannter Fehler";
     }
 
     async function insertItem(payload){
       const { error } = await supabase.from("roadtrip_items").insert(payload);
       if(error){
         console.warn(error);
-        alert("Speichern fehlgeschlagen (Edit-Code korrekt?).\n\n" + prettyDbError(error));
-        return;
+        alert("Speichern fehlgeschlagen (Edit-Code korrekt? / Supabase Policy?).\n\n" + prettyDbError(error));
       }
     }
     async function updateItem(id, payload){
       const { error } = await supabase.from("roadtrip_items").update(payload).eq("id", id);
       if(error){
         console.warn(error);
-        alert("Update fehlgeschlagen (Edit-Code korrekt?).\n\n" + prettyDbError(error));
-        return;
+        alert("Update fehlgeschlagen (Edit-Code korrekt? / Supabase Policy?).\n\n" + prettyDbError(error));
       }
     }
     async function deleteItem(id){
       const { error } = await supabase.from("roadtrip_items").delete().eq("id", id);
       if(error){
         console.warn(error);
-        alert("Löschen fehlgeschlagen (Edit-Code korrekt?).\n\n" + prettyDbError(error));
-        return;
+        alert("Löschen fehlgeschlagen (Edit-Code korrekt? / Supabase Policy?).\n\n" + prettyDbError(error));
       }
     }
 
@@ -771,49 +766,9 @@
     }
 
     /***********************
-     * 8) Edit Code UI
+     * 8) Edit Code UI (AUTO)
      ***********************/
     const badge = document.getElementById("authBadge");
-    /***********************
- * 8) Edit Code UI (AUTO)
- ***********************/
-const badge = document.getElementById("authBadge");
-const inputCode = document.getElementById("editCode");
-const note = document.getElementById("authNote");
-
-function setEditUI(on){
-  editEnabled = on;
-  if(on){
-    badge.textContent = "🔓 Edit aktiviert";
-    note.textContent = "Edit ist aktiv. Ihr könnt jetzt hinzufügen, bearbeiten und löschen.";
-  }else{
-    badge.textContent = "🔒 Read-only";
-    note.textContent = "Seite ist öffentlich lesbar. Bearbeiten geht nur mit eurem gemeinsamen Code.";
-  }
-}
-
-// Auto-check bei jeder Eingabe (mit kleinem Debounce)
-let _t = null;
-function handleCodeChange(){
-  clearTimeout(_t);
-  _t = setTimeout(() => {
-    const code = (inputCode.value || "").trim();
-
-    if(code === REQUIRED_EDIT_CODE){
-      currentEditCode = code;
-      setEditUI(true);
-    }else{
-      currentEditCode = "";
-      setEditUI(false);
-    }
-  }, 120);
-}
-
-inputCode.addEventListener("input", handleCodeChange);
-inputCode.addEventListener("paste", handleCodeChange);
-inputCode.addEventListener("keydown", (e) => {
-  if(e.key === "Enter") handleCodeChange();
-});
     const inputCode = document.getElementById("editCode");
     const note = document.getElementById("authNote");
 
@@ -821,41 +776,34 @@ inputCode.addEventListener("keydown", (e) => {
       editEnabled = on;
       if(on){
         badge.textContent = "🔓 Edit aktiviert";
-        btnEnable.style.display = "none";
-        btnDisable.style.display = "inline-flex";
         note.textContent = "Edit ist aktiv. Ihr könnt jetzt hinzufügen, bearbeiten und löschen.";
       }else{
         badge.textContent = "🔒 Read-only";
-        btnEnable.style.display = "inline-flex";
-        btnDisable.style.display = "none";
-        note.textContent = "Seite ist öffentlich lesbar. Bearbeiten geht nur mit eurem gemeinsamen Code.";
+        note.textContent = "Seite ist öffentlich lesbar. Tippt den Code → Edit wird automatisch aktiviert.";
       }
     }
 
-    btnEnable.addEventListener("click", async () => {
-      const code = (inputCode.value || "").trim();
-      if(!code){
-        alert("Bitte euren Code eingeben.");
-        return;
-      }
-      // lokaler Check (schnell). Der echte Check passiert in Supabase per Policy.
-      if(code !== REQUIRED_EDIT_CODE){
-        alert("Code falsch.");
-        setEditUI(false);
-        currentEditCode = "";
-        return;
-      }
-      currentEditCode = code;
-      setEditUI(true);
+    // Auto-check (debounced)
+    let _t = null;
+    function handleCodeChange(){
+      clearTimeout(_t);
+      _t = setTimeout(() => {
+        const code = (inputCode.value || "").trim();
 
-      // kleiner Test-Call: nichts speichern, nur Hinweise geben
-      // (Optional) – wir lassen es simpel.
-    });
+        if(code === REQUIRED_EDIT_CODE){
+          currentEditCode = code;
+          setEditUI(true);
+        }else{
+          currentEditCode = "";
+          setEditUI(false);
+        }
+      }, 120);
+    }
 
-    btnDisable.addEventListener("click", () => {
-      currentEditCode = "";
-      inputCode.value = "";
-      setEditUI(false);
+    inputCode.addEventListener("input", handleCodeChange);
+    inputCode.addEventListener("paste", handleCodeChange);
+    inputCode.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") handleCodeChange();
     });
 
     /***********************
@@ -870,4 +818,3 @@ inputCode.addEventListener("keydown", (e) => {
   </script>
 </body>
 </html>
-
