@@ -205,7 +205,7 @@
         </div>
         <h1>Portugal Roadtrip</h1>
         <p class="subtitle">
-          Klickt die Stops an, plant Tagestrips – und packt eure Hotel-Links, Spots, Fotos & Ideen direkt ins Board (live sync).
+          Klickt die Stops an, plant Tagestrips – und packt eure Hotel-Links, Spots, Fotos & Ideen direkt ins Board.
         </p>
       </div>
 
@@ -224,7 +224,7 @@
             <strong>Interaktive Karte</strong>
             <span>Route + Pins • Board-Items tauchen auch in den Popups auf</span>
           </div>
-          <div class="badge" id="authBadge">🔒 Nicht eingeloggt</div>
+          <div class="badge" id="authBadge">🔒 Read-only</div>
         </div>
         <div id="map"></div>
         <div class="map-foot">
@@ -234,7 +234,7 @@
             <div class="stat" id="statStops">Stops: 5</div>
             <div class="stat" id="statIdeas">Ideen: —</div>
           </div>
-          <div class="stat">Tipp: Für Fotos einfach eine <b>Bild-URL</b> (z.B. Google Photos Share-Link / direktes Bild) reinpacken.</div>
+          <div class="stat">Tipp: Für Fotos am besten eine <b>direkte Bild-URL</b> nutzen.</div>
         </div>
       </section>
 
@@ -243,22 +243,22 @@
         <div class="card-head">
           <div class="card-title">
             <strong>Stops + Ideenboard</strong>
-            <span>Unterkünfte als Bases • Alles gemeinsam editierbar</span>
+            <span>Unterkünfte als Bases • Gemeinsam editierbar per Code</span>
           </div>
           <button class="btn-small btn-good" id="btnAdd">➕ Idee hinzufügen</button>
         </div>
 
         <div class="panel">
-          <!-- AUTH -->
+          <!-- CODE ACCESS -->
           <div class="section">
-            <strong style="font-size:13px;">Login (damit nicht jeder im Internet editieren kann)</strong>
+            <strong style="font-size:13px;">Edit-Code (kein Login nötig)</strong>
             <div class="board-tools" style="margin-top:10px">
-              <input id="email" type="email" placeholder="E-Mail (du oder Kollege)" style="flex:1;min-width:220px;border-radius:14px;font-weight:700">
-              <button id="btnLogin" class="btn-small">🔑 Magic-Link senden</button>
-              <button id="btnLogout" class="btn-small btn-danger" style="display:none">Logout</button>
+              <input id="editCode" type="password" placeholder="Gemeinsamer Code (z.B. PT-ROADTRIP-2026)" style="flex:1;min-width:220px;border-radius:14px;font-weight:800">
+              <button id="btnEnableEdit" class="btn-small">🔓 Edit aktivieren</button>
+              <button id="btnDisableEdit" class="btn-small btn-danger" style="display:none">🔒 Sperren</button>
             </div>
             <div class="small-note" id="authNote">
-              Du gibst deine E-Mail ein → Supabase schickt dir einen Login-Link. Danach ist Bearbeiten möglich.
+              Seite ist öffentlich lesbar. Bearbeiten geht nur mit eurem gemeinsamen Code.
             </div>
           </div>
 
@@ -303,7 +303,7 @@
       <div class="modal-head">
         <div>
           <div style="font-weight:800">Idee / Hotel / Spot hinzufügen</div>
-          <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:4px" id="modalSub">Wird live für euch beide gespeichert</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:4px" id="modalSub">Wird in Supabase gespeichert (Code-geschützt)</div>
         </div>
         <button class="btn-small btn-danger" id="btnClose">✕</button>
       </div>
@@ -340,7 +340,7 @@
         <div class="field">
           <label>Foto-URL (optional)</label>
           <input id="mImg" placeholder="https://...jpg/png" style="border-radius:14px;font-weight:700">
-          <div class="hint">Am besten eine direkte Bild-URL (oder ein Share-Link der als Bild lädt)</div>
+          <div class="hint">Am besten eine direkte Bild-URL (oder Share-Link, der als Bild lädt)</div>
         </div>
 
         <div class="field full">
@@ -360,9 +360,11 @@
     /***********************
      * 1) CONFIG
      ***********************/
-    // >>> HIER EINTRAGEN (Supabase -> Project Settings -> API)
     const SUPABASE_URL = "https://uhlisovcranwtcuwtqde.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_ofS72jPaQKpER9XbHZdxxw_y1orhvDT";
+
+    // Gemeinsamer Code (muss mit Supabase Policy übereinstimmen!)
+    const REQUIRED_EDIT_CODE = "PT-ROADTRIP-2026";
 
     const stops = [
       { id:"lisbon", name:"Lissabon", nights:"3 Nächte", vibe:"City, Food, Aussicht", coords:[38.7223,-9.1393], dayTrips:["Sintra","Belém","LX Factory","Miradouros"], note:"Auto hier möglichst stehen lassen (Parken/Verkehr)." },
@@ -377,11 +379,11 @@
     /***********************
      * 2) SUPABASE INIT
      ***********************/
-    const supabase = (SUPABASE_URL.includes("PASTE_") || SUPABASE_ANON_KEY.includes("PASTE_"))
-      ? null
-      : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let sessionUser = null;
+    // edit state
+    let editEnabled = false;
+    let currentEditCode = "";
 
     /***********************
      * 3) MAP INIT + ROUTE
@@ -400,7 +402,7 @@
     const routeLayer = L.layerGroup().addTo(map);
 
     const markers = {};
-    const markerPopups = {}; // baseId -> function to build popup
+    const markerPopups = {};
 
     function stopIcon(n){
       const html = `
@@ -539,7 +541,6 @@
     const filterCat  = document.getElementById("filterCat");
     const searchEl   = document.getElementById("search");
 
-    // fill filter base + modal base
     function fillBaseOptions(){
       filterBase.innerHTML = `<option value="all">Alle Bases</option>` + BASE_NAMES.map(n => `<option>${esc(n)}</option>`).join("");
       document.getElementById("mBase").innerHTML = BASE_NAMES.map(n => `<option>${esc(n)}</option>`).join("");
@@ -600,7 +601,6 @@
         `;
       }).join("");
 
-      // Refresh marker popups with new counts/items
       stops.forEach(s=>{
         const m = markers[s.id];
         m.setPopupContent(markerPopups[s.id]());
@@ -626,14 +626,12 @@
       }
 
       if(act === "edit"){
+        if(!editEnabled){ alert("🔒 Read-only. Erst Edit-Code aktivieren."); return; }
         openModal("edit", it);
       }
 
       if(act === "del"){
-        if(!sessionUser){
-          alert("Bitte erst einloggen, damit Löschen erlaubt ist.");
-          return;
-        }
+        if(!editEnabled){ alert("🔒 Read-only. Erst Edit-Code aktivieren."); return; }
         const ok = confirm("Wirklich löschen?");
         if(!ok) return;
         await deleteItem(it.id);
@@ -672,8 +670,8 @@
     function closeModal(){ modalBackdrop.style.display = "none"; }
 
     btnAdd.addEventListener("click", () => {
-      if(!sessionUser){
-        alert("Bitte erst einloggen (Magic-Link), dann könnt ihr Items speichern.");
+      if(!editEnabled){
+        alert("🔒 Read-only. Erst Edit-Code aktivieren.");
         return;
       }
       openModal("add");
@@ -682,8 +680,8 @@
     modalBackdrop.addEventListener("click", (e) => { if(e.target === modalBackdrop) closeModal(); });
 
     btnSave.addEventListener("click", async () => {
-      if(!sessionUser){
-        alert("Bitte erst einloggen (Magic-Link), dann könnt ihr Items speichern.");
+      if(!editEnabled){
+        alert("🔒 Read-only. Erst Edit-Code aktivieren.");
         return;
       }
       const payload = {
@@ -693,7 +691,7 @@
         url: document.getElementById("mUrl").value.trim() || null,
         image_url: document.getElementById("mImg").value.trim() || null,
         notes: document.getElementById("mNotes").value.trim() || null,
-        created_by: sessionUser?.id || null
+        edit_code: currentEditCode
       };
       if(!payload.title){
         alert("Bitte einen Titel eingeben.");
@@ -707,8 +705,8 @@
     });
 
     btnDelete.addEventListener("click", async () => {
-      if(!sessionUser){
-        alert("Bitte erst einloggen.");
+      if(!editEnabled){
+        alert("🔒 Read-only. Erst Edit-Code aktivieren.");
         return;
       }
       const ok = confirm("Wirklich löschen?");
@@ -721,11 +719,6 @@
      * 7) Supabase CRUD + Realtime
      ***********************/
     async function loadItems(){
-      if(!supabase){
-        allItems = [];
-        renderBoard();
-        return;
-      }
       const { data, error } = await supabase
         .from("roadtrip_items")
         .select("*")
@@ -740,100 +733,99 @@
       renderBoard();
     }
 
+    function prettyDbError(error){
+      const msg = (error && (error.message || error.details || error.hint)) ? (error.message || error.details || error.hint) : "Unbekannter Fehler";
+      return msg;
+    }
+
     async function insertItem(payload){
       const { error } = await supabase.from("roadtrip_items").insert(payload);
-      if(error){ console.warn(error); alert("Speichern fehlgeschlagen."); return; }
+      if(error){
+        console.warn(error);
+        alert("Speichern fehlgeschlagen (Edit-Code korrekt?).\n\n" + prettyDbError(error));
+        return;
+      }
     }
     async function updateItem(id, payload){
       const { error } = await supabase.from("roadtrip_items").update(payload).eq("id", id);
-      if(error){ console.warn(error); alert("Update fehlgeschlagen."); return; }
+      if(error){
+        console.warn(error);
+        alert("Update fehlgeschlagen (Edit-Code korrekt?).\n\n" + prettyDbError(error));
+        return;
+      }
     }
     async function deleteItem(id){
       const { error } = await supabase.from("roadtrip_items").delete().eq("id", id);
-      if(error){ console.warn(error); alert("Löschen fehlgeschlagen."); return; }
-    }
-
-    function setAuthUI(user){
-      const badge = document.getElementById("authBadge");
-      const btnLogout = document.getElementById("btnLogout");
-      const note = document.getElementById("authNote");
-
-      if(user){
-        badge.textContent = `✅ Eingeloggt: ${user.email}`;
-        btnLogout.style.display = "inline-flex";
-        note.textContent = "Ihr könnt jetzt beide Items hinzufügen, bearbeiten und löschen.";
-      }else{
-        badge.textContent = "🔒 Nicht eingeloggt";
-        btnLogout.style.display = "none";
-        note.textContent = "E-Mail eingeben → Magic-Link → danach könnt ihr das Board editieren.";
-      }
-    }
-
-    async function initAuth(){
-      if(!supabase){
-        setAuthUI(null);
-        document.getElementById("authBadge").textContent = "⚠️ Supabase nicht konfiguriert";
-        return;
-      }
-
-      const { data } = await supabase.auth.getSession();
-      sessionUser = data?.session?.user || null;
-      setAuthUI(sessionUser);
-
-      supabase.auth.onAuthStateChange((_event, sess) => {
-        sessionUser = sess?.user || null;
-        setAuthUI(sessionUser);
-        // reload items after login/out
-        loadItems();
-      });
-    }
-
-    document.getElementById("btnLogin").addEventListener("click", async () => {
-      if(!supabase){
-        alert("Supabase ist noch nicht konfiguriert (URL/Key).");
-        return;
-      }
-      const email = document.getElementById("email").value.trim();
-      if(!email){ alert("Bitte E-Mail eintragen."); return; }
-
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: window.location.href }
-      });
-
       if(error){
         console.warn(error);
-        alert("Login-Link konnte nicht gesendet werden.");
+        alert("Löschen fehlgeschlagen (Edit-Code korrekt?).\n\n" + prettyDbError(error));
         return;
       }
-      alert("✅ Magic-Link ist raus! Öffne den Link aus deiner Mail – dann bist du eingeloggt.");
-    });
-
-    document.getElementById("btnLogout").addEventListener("click", async () => {
-      if(!supabase) return;
-      await supabase.auth.signOut();
-    });
+    }
 
     function initRealtime(){
-      if(!supabase) return;
-
       supabase
         .channel("roadtrip_items_changes")
-        .on("postgres_changes", { event:"*", schema:"public", table:"roadtrip_items" }, payload => {
-          // Einfach neu laden -> simpel & stabil
-          loadItems();
-        })
+        .on("postgres_changes", { event:"*", schema:"public", table:"roadtrip_items" }, () => loadItems())
         .subscribe();
     }
 
     /***********************
-     * 8) BOOT
+     * 8) Edit Code UI
+     ***********************/
+    const badge = document.getElementById("authBadge");
+    const btnEnable = document.getElementById("btnEnableEdit");
+    const btnDisable = document.getElementById("btnDisableEdit");
+    const inputCode = document.getElementById("editCode");
+    const note = document.getElementById("authNote");
+
+    function setEditUI(on){
+      editEnabled = on;
+      if(on){
+        badge.textContent = "🔓 Edit aktiviert";
+        btnEnable.style.display = "none";
+        btnDisable.style.display = "inline-flex";
+        note.textContent = "Edit ist aktiv. Ihr könnt jetzt hinzufügen, bearbeiten und löschen.";
+      }else{
+        badge.textContent = "🔒 Read-only";
+        btnEnable.style.display = "inline-flex";
+        btnDisable.style.display = "none";
+        note.textContent = "Seite ist öffentlich lesbar. Bearbeiten geht nur mit eurem gemeinsamen Code.";
+      }
+    }
+
+    btnEnable.addEventListener("click", async () => {
+      const code = (inputCode.value || "").trim();
+      if(!code){
+        alert("Bitte euren Code eingeben.");
+        return;
+      }
+      // lokaler Check (schnell). Der echte Check passiert in Supabase per Policy.
+      if(code !== REQUIRED_EDIT_CODE){
+        alert("Code falsch.");
+        setEditUI(false);
+        currentEditCode = "";
+        return;
+      }
+      currentEditCode = code;
+      setEditUI(true);
+
+      // kleiner Test-Call: nichts speichern, nur Hinweise geben
+      // (Optional) – wir lassen es simpel.
+    });
+
+    btnDisable.addEventListener("click", () => {
+      currentEditCode = "";
+      inputCode.value = "";
+      setEditUI(false);
+    });
+
+    /***********************
+     * 9) BOOT
      ***********************/
     (async function boot(){
-      // defaults
       document.getElementById("statIdeas").textContent = "Ideen: 0";
-
-      await initAuth();
+      setEditUI(false);
       await loadItems();
       initRealtime();
     })();
