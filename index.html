@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Portugal Roadtrip | Lissabon → Faro</title>
+  <title>Portugal Roadtrip | Map + Ideenboard</title>
 
   <!-- Leaflet -->
   <link
@@ -18,6 +18,9 @@
     crossorigin=""
   ></script>
 
+  <!-- Supabase JS v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,29 +28,25 @@
 
   <style>
     :root{
-      --bg: #070A12;
-      --card: rgba(255,255,255,0.06);
-      --card2: rgba(255,255,255,0.08);
-      --stroke: rgba(255,255,255,0.12);
-      --text: rgba(255,255,255,0.92);
-      --muted: rgba(255,255,255,0.70);
-      --muted2: rgba(255,255,255,0.55);
-      --shadow: 0 22px 70px rgba(0,0,0,0.55);
-      --accent: #7C5CFF;
-      --accent2: #18D3FF;
-      --good: #39FFAA;
-      --warn: #FFCC66;
-      --danger: #FF5C7A;
-
-      --radius: 18px;
+      --bg:#070A12;
+      --card:rgba(255,255,255,0.06);
+      --stroke:rgba(255,255,255,0.12);
+      --text:rgba(255,255,255,0.92);
+      --muted:rgba(255,255,255,0.70);
+      --muted2:rgba(255,255,255,0.55);
+      --shadow:0 22px 70px rgba(0,0,0,0.55);
+      --accent:#7C5CFF;
+      --accent2:#18D3FF;
+      --good:#39FFAA;
+      --danger:#FF5C7A;
+      --radius:18px;
     }
-
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
     body{
       margin:0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: var(--text);
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--text);
       background:
         radial-gradient(1200px 700px at 15% 10%, rgba(124,92,255,0.22), transparent 55%),
         radial-gradient(900px 500px at 85% 15%, rgba(24,211,255,0.18), transparent 60%),
@@ -55,383 +54,143 @@
         linear-gradient(180deg, #060814 0%, #070A12 60%, #060814 100%);
       overflow-x:hidden;
     }
-
-    .wrap{
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 28px 18px 54px;
-    }
-
-    header{
-      display:flex;
-      align-items:flex-end;
-      justify-content:space-between;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-
-    .title{
-      display:flex;
-      flex-direction:column;
-      gap: 8px;
-      max-width: 860px;
-    }
-
-    .badge-row{
-      display:flex;
-      flex-wrap:wrap;
-      gap: 10px;
-      align-items:center;
-    }
-
+    .wrap{max-width:1280px;margin:0 auto;padding:28px 18px 54px}
+    header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px}
+    .title{display:flex;flex-direction:column;gap:8px;max-width:880px}
+    .badge-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
     .badge{
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.10);
-      color: var(--muted);
-      font-size: 12px;
-      display:inline-flex;
-      gap: 8px;
-      align-items:center;
-      backdrop-filter: blur(8px);
+      padding:8px 12px;border-radius:999px;background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);color:var(--muted);
+      font-size:12px;display:inline-flex;gap:8px;align-items:center;backdrop-filter:blur(8px)
     }
-
-    .badge .dot{
-      width: 8px; height:8px; border-radius:50%;
-      background: var(--accent2);
-      box-shadow: 0 0 0 4px rgba(24,211,255,0.12);
+    .badge .dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);box-shadow:0 0 0 4px rgba(24,211,255,0.12)}
+    h1{margin:0;font-size:clamp(28px,3.2vw,44px);line-height:1.05;letter-spacing:-0.02em}
+    .subtitle{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+    .controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;align-items:center}
+    button, .pill, input, select, textarea{
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(255,255,255,0.06);
+      color:var(--text);
+      border-radius:999px;
+      padding:10px 12px;
+      font-weight:600;
+      font-size:13px;
+      backdrop-filter:blur(10px);
     }
-
-    h1{
-      margin:0;
-      font-size: clamp(28px, 3.2vw, 44px);
-      line-height: 1.05;
-      letter-spacing: -0.02em;
-    }
-
-    .subtitle{
-      margin:0;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    .controls{
-      display:flex;
-      flex-wrap:wrap;
-      gap: 10px;
-      justify-content:flex-end;
-      align-items:center;
-    }
-
-    button, .pill{
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(255,255,255,0.06);
-      color: var(--text);
-      border-radius: 999px;
-      padding: 10px 12px;
-      font-weight: 600;
-      font-size: 13px;
-      cursor: pointer;
-      transition: transform 0.12s ease, background 0.12s ease, border 0.12s ease;
-      backdrop-filter: blur(10px);
-      display:inline-flex;
-      gap: 8px;
-      align-items:center;
-      user-select:none;
-    }
-    button:hover{
-      transform: translateY(-1px);
-      background: rgba(255,255,255,0.09);
-      border-color: rgba(255,255,255,0.18);
-    }
-
-    .grid{
-      display:grid;
-      grid-template-columns: 1.5fr 1fr;
-      gap: 16px;
-      margin-top: 14px;
-    }
-
-    @media (max-width: 980px){
-      .grid{ grid-template-columns: 1fr; }
-      header{ flex-direction:column; align-items:flex-start; }
-      .controls{ justify-content:flex-start; }
-    }
-
+    button{cursor:pointer;transition:transform .12s ease,background .12s ease,border .12s ease}
+    button:hover{transform:translateY(-1px);background:rgba(255,255,255,0.09);border-color:rgba(255,255,255,0.18)}
+    input, select{outline:none}
+    textarea{border-radius:16px;font-weight:500;font-size:13px;resize:vertical;min-height:90px}
+    .grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-top:14px}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}header{flex-direction:column;align-items:flex-start}.controls{justify-content:flex-start}}
     .card{
-      background: var(--card);
-      border: 1px solid var(--stroke);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(14px);
+      background:var(--card);
+      border:1px solid var(--stroke);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(14px);
       overflow:hidden;
     }
-
     .card-head{
-      padding: 14px 16px;
+      padding:14px 16px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap: 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.10);
-      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      gap:12px;
+      border-bottom:1px solid rgba(255,255,255,0.10);
+      background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
     }
-
-    .card-title{
-      display:flex;
-      flex-direction:column;
-      gap: 4px;
-    }
-
-    .card-title strong{
-      font-size: 14px;
-      letter-spacing: -0.01em;
-    }
-
-    .card-title span{
-      font-size: 12px;
-      color: var(--muted2);
-    }
-
-    #map{
-      width: 100%;
-      height: 560px;
-    }
-
-    .map-foot{
-      padding: 12px 16px 16px;
-      display:flex;
-      flex-wrap:wrap;
-      gap: 10px;
-      align-items:center;
-      justify-content:space-between;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .stat-row{
-      display:flex;
-      flex-wrap:wrap;
-      gap: 10px;
-      align-items:center;
-    }
-
-    .stat{
-      padding: 8px 10px;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.10);
-    }
-
-    .panel{
-      padding: 16px;
-    }
-
-    .section{
-      padding: 14px 0;
-      border-top: 1px solid rgba(255,255,255,0.08);
-    }
-    .section:first-child{
-      border-top: none;
-      padding-top: 0;
-    }
-
-    .timeline{
-      display:flex;
-      flex-direction:column;
-      gap: 10px;
-      margin-top: 6px;
-    }
-
+    .card-title{display:flex;flex-direction:column;gap:4px}
+    .card-title strong{font-size:14px;letter-spacing:-0.01em}
+    .card-title span{font-size:12px;color:var(--muted2)}
+    #map{width:100%;height:560px}
+    .map-foot{padding:12px 16px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px}
+    .stat-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .stat{padding:8px 10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10)}
+    .panel{padding:16px}
+    .section{padding:14px 0;border-top:1px solid rgba(255,255,255,0.08)}
+    .section:first-child{border-top:none;padding-top:0}
+    .timeline{display:flex;flex-direction:column;gap:10px;margin-top:8px}
     .stop{
-      position:relative;
-      padding: 12px 12px 12px 14px;
-      border-radius: 16px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.10);
-      display:flex;
-      gap: 12px;
-      align-items:flex-start;
-      cursor:pointer;
-      transition: transform 0.12s ease, background 0.12s ease, border 0.12s ease;
+      padding:12px 12px 12px 14px;border-radius:16px;background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);display:flex;gap:12px;align-items:flex-start;
+      cursor:pointer;transition:transform .12s ease,background .12s ease,border .12s ease
     }
-    .stop:hover{
-      transform: translateY(-1px);
-      background: rgba(255,255,255,0.08);
-      border-color: rgba(255,255,255,0.16);
-    }
-
+    .stop:hover{transform:translateY(-1px);background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.16)}
     .pin{
-      width: 32px; height:32px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, rgba(124,92,255,0.9), rgba(24,211,255,0.9));
-      box-shadow: 0 14px 40px rgba(124,92,255,0.20);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      flex: 0 0 auto;
-      border: 1px solid rgba(255,255,255,0.18);
+      width:32px;height:32px;border-radius:12px;
+      background:linear-gradient(135deg, rgba(124,92,255,0.9), rgba(24,211,255,0.9));
+      display:flex;align-items:center;justify-content:center;flex:0 0 auto;
+      border:1px solid rgba(255,255,255,0.18)
     }
-
-    .stop h3{
-      margin: 0;
-      font-size: 14px;
-      letter-spacing: -0.01em;
-    }
-    .stop p{
-      margin: 6px 0 0 0;
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .chips{
-      margin-top: 8px;
-      display:flex;
-      flex-wrap:wrap;
-      gap: 8px;
-    }
-
+    .stop h3{margin:0;font-size:14px;letter-spacing:-0.01em}
+    .stop p{margin:6px 0 0 0;font-size:12px;color:var(--muted);line-height:1.5}
+    .chips{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px}
     .chip{
-      font-size: 11px;
-      padding: 6px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
-      color: rgba(255,255,255,0.82);
+      font-size:11px;padding:6px 8px;border-radius:999px;border:1px solid rgba(255,255,255,0.12);
+      background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.82)
     }
 
-    .kpi-grid{
-      display:grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-top: 12px;
+    /* Board */
+    .board-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+    .board-tools input, .board-tools select{padding:10px 12px}
+    .board-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+    .item{
+      padding:12px;border-radius:16px;background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+      display:flex;gap:12px;align-items:flex-start;justify-content:space-between
     }
-    @media (max-width: 540px){
-      .kpi-grid{ grid-template-columns: 1fr; }
-      #map{ height: 520px; }
+    .item-left{display:flex;gap:12px;align-items:flex-start}
+    .thumb{
+      width:58px;height:58px;border-radius:14px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(255,255,255,0.06);
+      overflow:hidden;flex:0 0 auto;
+      display:flex;align-items:center;justify-content:center;
+      color:rgba(255,255,255,0.6);font-weight:700
     }
+    .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .item h4{margin:0;font-size:13px;letter-spacing:-0.01em}
+    .meta{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.45}
+    .meta a{color:rgba(255,255,255,0.85);text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.2)}
+    .meta a:hover{border-bottom-color:rgba(255,255,255,0.45)}
+    .item-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .btn-small{padding:8px 10px;font-size:12px}
+    .btn-danger{border-color:rgba(255,92,122,0.35);background:rgba(255,92,122,0.10)}
+    .btn-danger:hover{background:rgba(255,92,122,0.16);border-color:rgba(255,92,122,0.50)}
+    .btn-good{border-color:rgba(57,255,170,0.30);background:rgba(57,255,170,0.10)}
+    .btn-good:hover{background:rgba(57,255,170,0.16);border-color:rgba(57,255,170,0.45)}
+    .small-note{color:var(--muted2);font-size:11px;line-height:1.5;margin-top:10px}
 
-    .kpi{
-      padding: 12px;
-      border-radius: 16px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.10);
+    /* Modal */
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(0,0,0,0.55);
+      display:none;align-items:center;justify-content:center;z-index:9999;
+      padding:18px;
     }
-    .kpi .label{
-      font-size: 11px;
-      color: var(--muted2);
-      margin-bottom: 6px;
+    .modal{
+      width:min(720px, 100%);
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.14);
+      border-radius:22px;
+      backdrop-filter:blur(16px);
+      box-shadow:0 25px 90px rgba(0,0,0,0.65);
+      overflow:hidden;
     }
-    .kpi .value{
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-    }
-
-    .list{
-      margin: 10px 0 0 0;
-      padding: 0;
-      list-style:none;
-      display:flex;
-      flex-direction:column;
-      gap: 8px;
-    }
-    .list li{
-      display:flex;
-      gap: 10px;
-      align-items:flex-start;
-      padding: 10px 10px;
-      border-radius: 14px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-    .list .b{
-      width: 10px; height: 10px; border-radius: 999px;
-      margin-top: 4px;
-      background: var(--good);
-      box-shadow: 0 0 0 4px rgba(57,255,170,0.12);
-      flex: 0 0 auto;
-    }
-
-    .small-note{
-      color: var(--muted2);
-      font-size: 11px;
-      margin-top: 10px;
-      line-height: 1.5;
-    }
+    .modal-head{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.12);display:flex;justify-content:space-between;align-items:center}
+    .modal-body{padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .modal-body .full{grid-column:1 / -1}
+    .modal-foot{padding:14px 16px;border-top:1px solid rgba(255,255,255,0.12);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    .field{display:flex;flex-direction:column}
+    .field input, .field select{border-radius:14px;font-weight:600}
+    .field textarea{border-radius:14px}
+    .hint{font-size:11px;color:var(--muted2);margin-top:6px}
 
     .leaflet-control-attribution{
-      background: rgba(0,0,0,0.35) !important;
-      color: rgba(255,255,255,0.7) !important;
-      border-radius: 10px !important;
-      border: 1px solid rgba(255,255,255,0.10) !important;
-      backdrop-filter: blur(8px);
-      padding: 4px 8px !important;
-      margin: 0 10px 10px 0 !important;
-    }
-
-    .toast{
-      position: fixed;
-      left: 50%;
-      bottom: 18px;
-      transform: translateX(-50%);
-      max-width: 920px;
-      width: calc(100% - 24px);
-      padding: 12px 14px;
-      border-radius: 16px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.14);
-      backdrop-filter: blur(16px);
-      color: rgba(255,255,255,0.85);
-      font-size: 12px;
-      display:flex;
-      gap: 10px;
-      align-items:center;
-      justify-content:space-between;
-      box-shadow: 0 22px 60px rgba(0,0,0,0.55);
-      z-index: 9999;
-    }
-    .toast b{ color: var(--text); }
-    .toast .x{
-      opacity:0.85;
-      border:none;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.14);
-      padding: 8px 10px;
-      border-radius: 999px;
-      cursor:pointer;
-      color: var(--text);
-      font-weight: 700;
-    }
-
-    .legend{
-      display:flex;
-      gap: 10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-    .legend .item{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .legend .swatch{
-      width: 10px; height:10px; border-radius: 999px;
-      background: var(--accent2);
-      box-shadow: 0 0 0 4px rgba(24,211,255,0.12);
-    }
-    .legend .swatch2{
-      width: 10px; height:10px; border-radius: 999px;
-      background: var(--accent);
-      box-shadow: 0 0 0 4px rgba(124,92,255,0.14);
+      background:rgba(0,0,0,0.35)!important;color:rgba(255,255,255,0.7)!important;
+      border-radius:10px!important;border:1px solid rgba(255,255,255,0.10)!important;
+      backdrop-filter:blur(8px);padding:4px 8px!important;margin:0 10px 10px 0!important
     }
   </style>
 </head>
@@ -441,34 +200,31 @@
     <header>
       <div class="title">
         <div class="badge-row">
-          <div class="badge"><span class="dot"></span> Flug: Memmingen → Lissabon (Mietwagen) • Rückflug: Faro → Memmingen</div>
-          <div class="badge">Roadtrip: Lissabon → Faro • Stops + Tagestrips</div>
+          <div class="badge"><span class="dot"></span> Flug: Memmingen → Lissabon • Rückflug: Faro → Memmingen</div>
+          <div class="badge">Route: Lissabon → Faro • Map + gemeinsames Ideenboard</div>
         </div>
-        <h1>Portugal Roadtrip Route</h1>
+        <h1>Portugal Roadtrip</h1>
         <p class="subtitle">
-          Eure Bases: <b>Lissabon</b>, <b>Costa Vicentina</b>, <b>Lagos</b>, <b>Albufeira</b>, <b>Faro</b> – mit Tagestrips, Spots und einer interaktiven Route auf der Karte.
+          Klickt die Stops an, plant Tagestrips – und packt eure Hotel-Links, Spots, Fotos & Ideen direkt ins Board (live sync).
         </p>
       </div>
 
       <div class="controls">
         <button id="btnFit">🧭 Route zentrieren</button>
-        <button id="btnToggle">🗺️ Route ein/aus</button>
+        <button id="btnToggleRoute">🗺️ Route ein/aus</button>
         <button id="btnOpenGoogle">📍 In Google Maps öffnen</button>
       </div>
     </header>
 
     <div class="grid">
-      <!-- MAP CARD -->
+      <!-- MAP -->
       <section class="card">
         <div class="card-head">
           <div class="card-title">
             <strong>Interaktive Karte</strong>
-            <span>Route + Marker • klickt auf Stops, um reinzuzoomen</span>
+            <span>Route + Pins • Board-Items tauchen auch in den Popups auf</span>
           </div>
-          <div class="legend">
-            <div class="item"><span class="swatch"></span> Route</div>
-            <div class="item"><span class="swatch2"></span> Stops</div>
-          </div>
+          <div class="badge" id="authBadge">🔒 Nicht eingeloggt</div>
         </div>
         <div id="map"></div>
         <div class="map-foot">
@@ -476,53 +232,64 @@
             <div class="stat" id="statDistance">Distanz: —</div>
             <div class="stat" id="statDuration">Fahrzeit: —</div>
             <div class="stat" id="statStops">Stops: 5</div>
+            <div class="stat" id="statIdeas">Ideen: —</div>
           </div>
-          <div class="stat">Tipp: Zoom rein und klick die Pins an – es gibt Mini-Infos + Tagestrips.</div>
+          <div class="stat">Tipp: Für Fotos einfach eine <b>Bild-URL</b> (z.B. Google Photos Share-Link / direktes Bild) reinpacken.</div>
         </div>
       </section>
 
-      <!-- TOUR PANEL -->
+      <!-- SIDE PANEL -->
       <aside class="card">
         <div class="card-head">
           <div class="card-title">
-            <strong>Tour-Übersicht</strong>
-            <span>Unterkünfte als Bases • Tagestrips flexibel</span>
+            <strong>Stops + Ideenboard</strong>
+            <span>Unterkünfte als Bases • Alles gemeinsam editierbar</span>
           </div>
-          <div class="badge" title="Du kannst das später easy anpassen">✨ Clean Plan</div>
+          <button class="btn-small btn-good" id="btnAdd">➕ Idee hinzufügen</button>
         </div>
 
         <div class="panel">
+          <!-- AUTH -->
           <div class="section">
-            <strong style="font-size:13px;">Bases (klick zum Zoomen)</strong>
-            <div class="timeline" id="timeline"></div>
-
-            <div class="kpi-grid">
-              <div class="kpi">
-                <div class="label">Vibe</div>
-                <div class="value">City → Wild Coast → Lagoons → Party → Easy Fly</div>
-              </div>
-              <div class="kpi">
-                <div class="label">Best for</div>
-                <div class="value">Strände, Küstenstraßen, Content, Nightlife</div>
-              </div>
-              <div class="kpi">
-                <div class="label">Maut / Mietwagen</div>
-                <div class="value">Achtung auf Maut + Auto bei Übergabe filmen</div>
-              </div>
+            <strong style="font-size:13px;">Login (damit nicht jeder im Internet editieren kann)</strong>
+            <div class="board-tools" style="margin-top:10px">
+              <input id="email" type="email" placeholder="E-Mail (du oder Kollege)" style="flex:1;min-width:220px;border-radius:14px;font-weight:700">
+              <button id="btnLogin" class="btn-small">🔑 Magic-Link senden</button>
+              <button id="btnLogout" class="btn-small btn-danger" style="display:none">Logout</button>
+            </div>
+            <div class="small-note" id="authNote">
+              Du gibst deine E-Mail ein → Supabase schickt dir einen Login-Link. Danach ist Bearbeiten möglich.
             </div>
           </div>
 
+          <!-- TIMELINE -->
           <div class="section">
-            <strong style="font-size:13px;">Tagestrip-Shortlist (pro Base)</strong>
-            <ul class="list">
-              <li><span class="b"></span><div><b>Lissabon:</b> Sintra (Pena/Regaleira), Belém, Miradouros, Time Out Market</div></li>
-              <li><span class="b"></span><div><b>Costa Vicentina:</b> Porto Covo, Praia do Malhão, Rota Vicentina, Sunset Cliffs</div></li>
-              <li><span class="b"></span><div><b>Lagos:</b> Ponta da Piedade, Praia Dona Ana, Praia do Camilo, Kayak/Boat Caves</div></li>
-              <li><span class="b"></span><div><b>Albufeira:</b> Benagil Cave, Praia da Marinha, Vilamoura, Nightlife (Strip/Altstadt)</div></li>
-              <li><span class="b"></span><div><b>Faro:</b> Altstadt + kurzer Walk • perfekt für entspannten Abflug</div></li>
-            </ul>
-            <div class="small-note">
-              Pro-Tipp für Content/Autos: <b>früh morgens</b> oder <b>golden hour</b> filmen. Costa Vicentina & Monchique sind dafür brutal gut.
+            <strong style="font-size:13px;">Bases (klick zum Zoomen)</strong>
+            <div class="timeline" id="timeline"></div>
+          </div>
+
+          <!-- BOARD -->
+          <div class="section">
+            <strong style="font-size:13px;">Ideenboard</strong>
+            <div class="board-tools">
+              <select id="filterBase" style="border-radius:14px">
+                <option value="all">Alle Bases</option>
+              </select>
+              <select id="filterCat" style="border-radius:14px">
+                <option value="all">Alle Kategorien</option>
+                <option>Hotel</option>
+                <option>Spot</option>
+                <option>Restaurant</option>
+                <option>Foto</option>
+                <option>Aktivität</option>
+                <option>ToDo</option>
+              </select>
+              <input id="search" placeholder="Suche (z.B. Benagil, Hotel...)" style="flex:1;min-width:180px;border-radius:14px;font-weight:700">
+            </div>
+
+            <div class="board-list" id="board"></div>
+            <div class="small-note" id="boardHint">
+              Noch keine Items – klick <b>„Idee hinzufügen“</b> und baut euch euer eigenes Mini-Trello direkt in der Reise-Map.
             </div>
           </div>
         </div>
@@ -530,96 +297,112 @@
     </div>
   </div>
 
-  <div class="toast" id="toast">
-    <div>💡 <b>Tip:</b> Klick einen Stop rechts in der Tour-Übersicht – die Karte fliegt dahin und zeigt euch die Details.</div>
-    <button class="x" id="toastClose">✕</button>
+  <!-- MODAL -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <div style="font-weight:800">Idee / Hotel / Spot hinzufügen</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:4px" id="modalSub">Wird live für euch beide gespeichert</div>
+        </div>
+        <button class="btn-small btn-danger" id="btnClose">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="field">
+          <label>Base</label>
+          <select id="mBase"></select>
+        </div>
+
+        <div class="field">
+          <label>Kategorie</label>
+          <select id="mCat">
+            <option>Hotel</option>
+            <option>Spot</option>
+            <option>Restaurant</option>
+            <option>Foto</option>
+            <option>Aktivität</option>
+            <option>ToDo</option>
+          </select>
+        </div>
+
+        <div class="field full">
+          <label>Titel</label>
+          <input id="mTitle" placeholder="z.B. Hotel XYZ / Benagil Tour / Sunset Spot" style="border-radius:14px;font-weight:800">
+        </div>
+
+        <div class="field">
+          <label>Link (optional)</label>
+          <input id="mUrl" placeholder="https://..." style="border-radius:14px;font-weight:700">
+          <div class="hint">Booking/Airbnb/Google Maps/Instagram/Whatever</div>
+        </div>
+
+        <div class="field">
+          <label>Foto-URL (optional)</label>
+          <input id="mImg" placeholder="https://...jpg/png" style="border-radius:14px;font-weight:700">
+          <div class="hint">Am besten eine direkte Bild-URL (oder ein Share-Link der als Bild lädt)</div>
+        </div>
+
+        <div class="field full">
+          <label>Notiz</label>
+          <textarea id="mNotes" placeholder="Warum geil? Preis? Parkplatz? Must-do?"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn-small btn-danger" id="btnDelete" style="display:none">🗑️ Löschen</button>
+        <button class="btn-small" id="btnSave">💾 Speichern</button>
+      </div>
+    </div>
   </div>
 
   <script>
-    // --- CONFIG: Stops (Bases) ---
-    // Du kannst hier jederzeit anpassen (z.B. anderes Hotel/Ort).
+    /***********************
+     * 1) CONFIG
+     ***********************/
+    // >>> HIER EINTRAGEN (Supabase -> Project Settings -> API)
+    const SUPABASE_URL = "https://uhlisovcranwtcuwtqde.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_ofS72jPaQKpER9XbHZdxxw_y1orhvDT";
+
     const stops = [
-      {
-        id: "lisbon",
-        name: "Lissabon",
-        nights: "3 Nächte",
-        vibe: "City, Food, Aussicht",
-        coords: [38.7223, -9.1393],
-        dayTrips: ["Sintra", "Belém", "LX Factory", "Miradouros"],
-        note: "Auto hier möglichst stehen lassen (Parken/Verkehr)."
-      },
-      {
-        id: "vicentina",
-        name: "Costa Vicentina",
-        nights: "2 Nächte",
-        vibe: "Wilde Atlantikküste",
-        // Base ungefähr zwischen Porto Covo / Vila Nova de Milfontes
-        coords: [37.7260, -8.7830],
-        dayTrips: ["Porto Covo", "Praia do Malhão", "Rota Vicentina", "Sunset Cliffs"],
-        note: "Hier fühlt sich Portugal am meisten nach Roadtrip an."
-      },
-      {
-        id: "lagos",
-        name: "Lagos",
-        nights: "3 Nächte",
-        vibe: "Top Strände + Grotten",
-        coords: [37.1028, -8.6730],
-        dayTrips: ["Ponta da Piedade", "Praia Dona Ana", "Praia do Camilo", "Boot/Kajak"],
-        note: "Landschaftlich der stärkste Algarve-Spot."
-      },
-      {
-        id: "albufeira",
-        name: "Albufeira",
-        nights: "3 Nächte",
-        vibe: "Party + zentral",
-        coords: [37.0880, -8.2500],
-        dayTrips: ["Benagil Cave", "Praia da Marinha", "Vilamoura", "Nightlife"],
-        note: "Beste Base für Nightlife (Strip/Altstadt)."
-      },
-      {
-        id: "faro",
-        name: "Faro",
-        nights: "Optional 1 Nacht",
-        vibe: "Easy Fly-out",
-        coords: [37.0194, -7.9304],
-        dayTrips: ["Altstadt", "kurzer Walk", "Chill vor Abflug"],
-        note: "Flughafen ist super nah – stressfreier Rückflug."
-      }
+      { id:"lisbon", name:"Lissabon", nights:"3 Nächte", vibe:"City, Food, Aussicht", coords:[38.7223,-9.1393], dayTrips:["Sintra","Belém","LX Factory","Miradouros"], note:"Auto hier möglichst stehen lassen (Parken/Verkehr)." },
+      { id:"vicentina", name:"Costa Vicentina", nights:"2 Nächte", vibe:"Wilde Atlantikküste", coords:[37.7260,-8.7830], dayTrips:["Porto Covo","Praia do Malhão","Rota Vicentina","Sunset Cliffs"], note:"Roadtrip-Feeling pur." },
+      { id:"lagos", name:"Lagos", nights:"3 Nächte", vibe:"Top Strände + Grotten", coords:[37.1028,-8.6730], dayTrips:["Ponta da Piedade","Praia Dona Ana","Praia do Camilo","Boot/Kajak"], note:"Landschaftlich der stärkste Algarve-Spot." },
+      { id:"albufeira", name:"Albufeira", nights:"3 Nächte", vibe:"Party + zentral", coords:[37.0880,-8.2500], dayTrips:["Benagil Cave","Praia da Marinha","Vilamoura","Nightlife"], note:"Beste Base für Nightlife (Strip/Altstadt)." },
+      { id:"faro", name:"Faro", nights:"Optional 1 Nacht", vibe:"Easy Fly-out", coords:[37.0194,-7.9304], dayTrips:["Altstadt","kurzer Walk","Chill vor Abflug"], note:"Stressfreier Rückflug (Flughafen nah)." },
     ];
 
-    // --- MAP INIT ---
-    const map = L.map("map", {
-      zoomControl: true,
-      scrollWheelZoom: true
-    }).setView([38.5, -9.2], 6);
+    const BASE_NAMES = stops.map(s => s.name);
 
-    // Tiles (OSM)
+    /***********************
+     * 2) SUPABASE INIT
+     ***********************/
+    const supabase = (SUPABASE_URL.includes("PASTE_") || SUPABASE_ANON_KEY.includes("PASTE_"))
+      ? null
+      : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let sessionUser = null;
+
+    /***********************
+     * 3) MAP INIT + ROUTE
+     ***********************/
+    const map = L.map("map", { zoomControl:true, scrollWheelZoom:true }).setView([38.5,-9.2], 6);
+
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap contributors"
+      maxZoom:19,
+      attribution:"&copy; OpenStreetMap contributors"
     }).addTo(map);
 
-    // --- Styles ---
-    const routeStyle = {
-      color: "#18D3FF",
-      weight: 5,
-      opacity: 0.9
-    };
+    const routeStyle = { color:"#18D3FF", weight:5, opacity:0.9 };
+    const glowStyle  = { color:"#7C5CFF", weight:11, opacity:0.18 };
 
-    // Custom "glow" effect by drawing a thicker, more transparent line below
-    const glowStyle = {
-      color: "#7C5CFF",
-      weight: 11,
-      opacity: 0.18
-    };
-
-    // Layer groups for toggling
     const markerLayer = L.layerGroup().addTo(map);
     const routeLayer = L.layerGroup().addTo(map);
 
-    // --- Markers ---
     const markers = {};
-    stops.forEach((s, idx) => {
+    const markerPopups = {}; // baseId -> function to build popup
+
+    function stopIcon(n){
       const html = `
         <div style="
           width:34px;height:34px;border-radius:14px;
@@ -629,71 +412,60 @@
           display:flex;align-items:center;justify-content:center;
           color:white;font-weight:800;
           font-family: Inter, system-ui, sans-serif;
-          ">
-          ${idx+1}
+        ">${n}</div>`;
+      return L.divIcon({ className:"", html, iconSize:[34,34], iconAnchor:[17,17] });
+    }
+
+    function esc(s){ return (s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+
+    let allItems = [];
+
+    function itemsForBase(baseName){
+      return allItems.filter(i => i.base === baseName);
+    }
+
+    function buildStopPopup(stop){
+      const items = itemsForBase(stop.name);
+      const list = items.slice(0,6).map(it => {
+        const link = it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">Link</a>` : "";
+        return `<div style="font-size:12px;opacity:.9;margin:6px 0">
+          <b>${esc(it.category)}</b> — ${esc(it.title)} ${link ? "• " + link : ""}
+        </div>`;
+      }).join("");
+
+      const more = items.length > 6 ? `<div style="font-size:12px;opacity:.7;margin-top:8px">… +${items.length-6} weitere im Board</div>` : "";
+
+      return `
+        <div style="font-family:Inter,system-ui,sans-serif;min-width:260px">
+          <div style="font-weight:800;font-size:14px;margin-bottom:6px">${esc(stop.name)} • ${esc(stop.nights)}</div>
+          <div style="color:#333;opacity:.85;font-size:12px;margin-bottom:10px">${esc(stop.vibe)}</div>
+          <div style="font-size:12px;margin:0 0 8px 0"><b>Tagestrips:</b> ${stop.dayTrips.map(esc).join(", ")}</div>
+          <div style="font-size:12px;opacity:.85;margin-bottom:10px">${esc(stop.note)}</div>
+          <div style="font-size:12px;margin-top:10px"><b>Board-Items hier:</b> ${items.length}</div>
+          ${items.length ? `<div style="margin-top:8px">${list}${more}</div>` : `<div style="font-size:12px;opacity:.7;margin-top:6px">Noch keine Ideen hier – fügt was hinzu 😄</div>`}
         </div>
       `;
-      const icon = L.divIcon({ className: "", html, iconSize: [34,34], iconAnchor: [17,17] });
+    }
 
-      const popup = `
-        <div style="font-family:Inter,system-ui,sans-serif;min-width:240px">
-          <div style="font-weight:800;font-size:14px;margin-bottom:6px">${idx+1}. ${s.name}</div>
-          <div style="color:#333;opacity:.85;font-size:12px;margin-bottom:10px">
-            <b>${s.nights}</b> • ${s.vibe}
-          </div>
-          <div style="font-size:12px;margin:0 0 8px 0"><b>Tagestrips:</b> ${s.dayTrips.join(", ")}</div>
-          <div style="font-size:12px;opacity:.85">${s.note}</div>
-        </div>
-      `;
-
-      const m = L.marker(s.coords, { icon }).bindPopup(popup);
+    stops.forEach((s, idx) => {
+      const m = L.marker(s.coords, { icon: stopIcon(idx+1) })
+        .bindPopup(buildStopPopup(s));
       m.addTo(markerLayer);
       markers[s.id] = m;
+      markerPopups[s.id] = () => buildStopPopup(s);
     });
 
-    // --- Timeline UI ---
-    const timelineEl = document.getElementById("timeline");
-    timelineEl.innerHTML = stops.map((s, i) => `
-      <div class="stop" data-stop="${s.id}">
-        <div class="pin">${i+1}</div>
-        <div>
-          <h3>${s.name} <span style="color:rgba(255,255,255,0.55);font-weight:600;">• ${s.nights}</span></h3>
-          <p>${s.vibe} — ${s.note}</p>
-          <div class="chips">
-            ${s.dayTrips.slice(0,4).map(t => `<span class="chip">${t}</span>`).join("")}
-          </div>
-        </div>
-      </div>
-    `).join("");
-
-    // Fly to stop on click
-    timelineEl.addEventListener("click", (e) => {
-      const card = e.target.closest(".stop");
-      if(!card) return;
-      const id = card.getAttribute("data-stop");
-      const stop = stops.find(x => x.id === id);
-      if(!stop) return;
-      map.flyTo(stop.coords, 12, { duration: 1.2 });
-      markers[id].openPopup();
-    });
-
-    // --- ROUTE (OSRM) ---
-    // OSRM expects lon,lat in URL.
-    async function fetchRoute() {
+    async function fetchRoute(){
       const coords = stops.map(s => `${s.coords[1]},${s.coords[0]}`).join(";");
       const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
-
       try{
         const res = await fetch(url);
         if(!res.ok) throw new Error("Route fetch failed");
         const data = await res.json();
-
         const route = data.routes?.[0];
         if(!route) throw new Error("No route found");
-
         const lineCoords = route.geometry.coordinates.map(([lon,lat]) => [lat,lon]);
 
-        // Draw glow + main route
         const glow = L.polyline(lineCoords, glowStyle);
         const line = L.polyline(lineCoords, routeStyle);
 
@@ -701,70 +473,370 @@
         glow.addTo(routeLayer);
         line.addTo(routeLayer);
 
-        // Fit map to route
-        const bounds = line.getBounds();
-        map.fitBounds(bounds.pad(0.12));
+        map.fitBounds(line.getBounds().pad(0.12));
 
-        // Stats
-        const km = route.distance / 1000;
-        const hours = route.duration / 3600;
-
-        document.getElementById("statDistance").textContent = `Distanz: ${km.toFixed(0)} km`;
-        document.getElementById("statDuration").textContent = `Fahrzeit: ~${hours.toFixed(1)} h`;
-
-      } catch(err){
-        console.warn(err);
-        document.getElementById("statDistance").textContent = "Distanz: (Route konnte nicht geladen werden)";
-        document.getElementById("statDuration").textContent = "Fahrzeit: —";
-
-        // Fallback: simple polyline between points
+        document.getElementById("statDistance").textContent = `Distanz: ${Math.round(route.distance/1000)} km`;
+        document.getElementById("statDuration").textContent = `Fahrzeit: ~${(route.duration/3600).toFixed(1)} h`;
+      }catch(e){
+        console.warn(e);
         const fallback = stops.map(s => s.coords);
         const glow = L.polyline(fallback, glowStyle);
         const line = L.polyline(fallback, routeStyle);
-
         routeLayer.clearLayers();
         glow.addTo(routeLayer);
         line.addTo(routeLayer);
         map.fitBounds(line.getBounds().pad(0.2));
+        document.getElementById("statDistance").textContent = "Distanz: (Route offline)";
+        document.getElementById("statDuration").textContent = "Fahrzeit: —";
       }
     }
-
     fetchRoute();
 
-    // --- Controls ---
     let routeVisible = true;
-
     document.getElementById("btnFit").addEventListener("click", () => {
-      // Fit to markers + route
-      const all = [];
-      stops.forEach(s => all.push(s.coords));
-      const bounds = L.latLngBounds(all);
-      map.fitBounds(bounds.pad(0.20));
+      map.fitBounds(L.latLngBounds(stops.map(s => s.coords)).pad(0.20));
     });
-
-    document.getElementById("btnToggle").addEventListener("click", () => {
+    document.getElementById("btnToggleRoute").addEventListener("click", () => {
       routeVisible = !routeVisible;
-      if(routeVisible){
-        routeLayer.addTo(map);
-      } else {
-        map.removeLayer(routeLayer);
-      }
+      if(routeVisible) routeLayer.addTo(map); else map.removeLayer(routeLayer);
     });
-
     document.getElementById("btnOpenGoogle").addEventListener("click", () => {
-      // Open as multi-stop route in Google Maps
-      // Format: https://www.google.com/maps/dir/?api=1&origin=...&destination=...&waypoints=...&travelmode=driving
       const origin = `${stops[0].coords[0]},${stops[0].coords[1]}`;
       const destination = `${stops[stops.length-1].coords[0]},${stops[stops.length-1].coords[1]}`;
-      const waypoints = stops.slice(1, -1).map(s => `${s.coords[0]},${s.coords[1]}`).join("|");
+      const waypoints = stops.slice(1,-1).map(s => `${s.coords[0]},${s.coords[1]}`).join("|");
       const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&waypoints=${encodeURIComponent(waypoints)}&travelmode=driving`;
       window.open(url, "_blank");
     });
 
-    // Toast close
-    document.getElementById("toastClose").addEventListener("click", () => {
-      document.getElementById("toast").style.display = "none";
+    /***********************
+     * 4) UI: Timeline + Filters
+     ***********************/
+    const timelineEl = document.getElementById("timeline");
+    timelineEl.innerHTML = stops.map((s,i) => `
+      <div class="stop" data-stop="${s.id}">
+        <div class="pin">${i+1}</div>
+        <div>
+          <h3>${esc(s.name)} <span style="color:rgba(255,255,255,0.55);font-weight:600;">• ${esc(s.nights)}</span></h3>
+          <p>${esc(s.vibe)} — ${esc(s.note)}</p>
+          <div class="chips">
+            ${s.dayTrips.slice(0,4).map(t => `<span class="chip">${esc(t)}</span>`).join("")}
+          </div>
+        </div>
+      </div>
+    `).join("");
+
+    timelineEl.addEventListener("click",(e)=>{
+      const card = e.target.closest(".stop");
+      if(!card) return;
+      const id = card.getAttribute("data-stop");
+      const stop = stops.find(x=>x.id===id);
+      if(!stop) return;
+      map.flyTo(stop.coords, 12, { duration: 1.2 });
+      markers[id].openPopup();
     });
+
+    const filterBase = document.getElementById("filterBase");
+    const filterCat  = document.getElementById("filterCat");
+    const searchEl   = document.getElementById("search");
+
+    // fill filter base + modal base
+    function fillBaseOptions(){
+      filterBase.innerHTML = `<option value="all">Alle Bases</option>` + BASE_NAMES.map(n => `<option>${esc(n)}</option>`).join("");
+      document.getElementById("mBase").innerHTML = BASE_NAMES.map(n => `<option>${esc(n)}</option>`).join("");
+    }
+    fillBaseOptions();
+
+    filterBase.addEventListener("change", renderBoard);
+    filterCat.addEventListener("change", renderBoard);
+    searchEl.addEventListener("input", renderBoard);
+
+    /***********************
+     * 5) Board render
+     ***********************/
+    const boardEl = document.getElementById("board");
+    const boardHint = document.getElementById("boardHint");
+
+    function matchesFilters(it){
+      const b = filterBase.value;
+      const c = filterCat.value;
+      const q = (searchEl.value||"").trim().toLowerCase();
+      if(b !== "all" && it.base !== b) return false;
+      if(c !== "all" && it.category !== c) return false;
+      if(q){
+        const hay = `${it.base} ${it.category} ${it.title} ${it.notes||""} ${it.url||""}`.toLowerCase();
+        if(!hay.includes(q)) return false;
+      }
+      return true;
+    }
+
+    function renderBoard(){
+      const items = allItems.filter(matchesFilters).sort((a,b)=> (b.created_at||"").localeCompare(a.created_at||""));
+      document.getElementById("statIdeas").textContent = `Ideen: ${allItems.length}`;
+
+      boardHint.style.display = items.length ? "none" : "block";
+      boardEl.innerHTML = items.map(it => {
+        const img = it.image_url ? `<img src="${esc(it.image_url)}" alt="">` : `<span>📌</span>`;
+        const link = it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">öffnen</a>` : "";
+        const notes = it.notes ? esc(it.notes) : "";
+        return `
+          <div class="item" data-id="${esc(it.id)}">
+            <div class="item-left">
+              <div class="thumb">${img}</div>
+              <div>
+                <h4>${esc(it.title)}</h4>
+                <div class="meta">
+                  <b>${esc(it.base)}</b> • ${esc(it.category)}
+                  ${link ? ` • ${link}` : ""}
+                  ${notes ? `<div style="margin-top:6px;opacity:.9">${notes}</div>` : ""}
+                </div>
+              </div>
+            </div>
+            <div class="item-actions">
+              <button class="btn-small" data-act="zoom">🗺️</button>
+              <button class="btn-small" data-act="edit">✏️</button>
+              <button class="btn-small btn-danger" data-act="del">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      // Refresh marker popups with new counts/items
+      stops.forEach(s=>{
+        const m = markers[s.id];
+        m.setPopupContent(markerPopups[s.id]());
+      });
+    }
+
+    boardEl.addEventListener("click", async (e) => {
+      const card = e.target.closest(".item");
+      if(!card) return;
+      const id = card.getAttribute("data-id");
+      const actBtn = e.target.closest("button");
+      if(!actBtn) return;
+      const act = actBtn.getAttribute("data-act");
+      const it = allItems.find(x=>x.id===id);
+      if(!it) return;
+
+      if(act === "zoom"){
+        const stop = stops.find(s => s.name === it.base);
+        if(stop){
+          map.flyTo(stop.coords, 12, { duration: 1.0 });
+          markers[stop.id].openPopup();
+        }
+      }
+
+      if(act === "edit"){
+        openModal("edit", it);
+      }
+
+      if(act === "del"){
+        if(!sessionUser){
+          alert("Bitte erst einloggen, damit Löschen erlaubt ist.");
+          return;
+        }
+        const ok = confirm("Wirklich löschen?");
+        if(!ok) return;
+        await deleteItem(it.id);
+      }
+    });
+
+    /***********************
+     * 6) Modal add/edit
+     ***********************/
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const btnAdd = document.getElementById("btnAdd");
+    const btnClose = document.getElementById("btnClose");
+    const btnSave = document.getElementById("btnSave");
+    const btnDelete = document.getElementById("btnDelete");
+
+    let modalMode = "add";
+    let editingId = null;
+
+    function setModalFields(it){
+      document.getElementById("mBase").value = it?.base || BASE_NAMES[0];
+      document.getElementById("mCat").value = it?.category || "Hotel";
+      document.getElementById("mTitle").value = it?.title || "";
+      document.getElementById("mUrl").value = it?.url || "";
+      document.getElementById("mImg").value = it?.image_url || "";
+      document.getElementById("mNotes").value = it?.notes || "";
+    }
+
+    function openModal(mode, it=null){
+      modalMode = mode;
+      editingId = it?.id || null;
+      setModalFields(it);
+      btnDelete.style.display = (mode === "edit") ? "inline-flex" : "none";
+      modalBackdrop.style.display = "flex";
+    }
+
+    function closeModal(){ modalBackdrop.style.display = "none"; }
+
+    btnAdd.addEventListener("click", () => {
+      if(!sessionUser){
+        alert("Bitte erst einloggen (Magic-Link), dann könnt ihr Items speichern.");
+        return;
+      }
+      openModal("add");
+    });
+    btnClose.addEventListener("click", closeModal);
+    modalBackdrop.addEventListener("click", (e) => { if(e.target === modalBackdrop) closeModal(); });
+
+    btnSave.addEventListener("click", async () => {
+      if(!sessionUser){
+        alert("Bitte erst einloggen (Magic-Link), dann könnt ihr Items speichern.");
+        return;
+      }
+      const payload = {
+        base: document.getElementById("mBase").value,
+        category: document.getElementById("mCat").value,
+        title: document.getElementById("mTitle").value.trim(),
+        url: document.getElementById("mUrl").value.trim() || null,
+        image_url: document.getElementById("mImg").value.trim() || null,
+        notes: document.getElementById("mNotes").value.trim() || null,
+        created_by: sessionUser?.id || null
+      };
+      if(!payload.title){
+        alert("Bitte einen Titel eingeben.");
+        return;
+      }
+
+      if(modalMode === "add") await insertItem(payload);
+      if(modalMode === "edit") await updateItem(editingId, payload);
+
+      closeModal();
+    });
+
+    btnDelete.addEventListener("click", async () => {
+      if(!sessionUser){
+        alert("Bitte erst einloggen.");
+        return;
+      }
+      const ok = confirm("Wirklich löschen?");
+      if(!ok) return;
+      await deleteItem(editingId);
+      closeModal();
+    });
+
+    /***********************
+     * 7) Supabase CRUD + Realtime
+     ***********************/
+    async function loadItems(){
+      if(!supabase){
+        allItems = [];
+        renderBoard();
+        return;
+      }
+      const { data, error } = await supabase
+        .from("roadtrip_items")
+        .select("*")
+        .order("created_at", { ascending:false });
+
+      if(error){
+        console.warn(error);
+        alert("Konnte Items nicht laden. Check Supabase URL/Key + Policies.");
+        return;
+      }
+      allItems = data || [];
+      renderBoard();
+    }
+
+    async function insertItem(payload){
+      const { error } = await supabase.from("roadtrip_items").insert(payload);
+      if(error){ console.warn(error); alert("Speichern fehlgeschlagen."); return; }
+    }
+    async function updateItem(id, payload){
+      const { error } = await supabase.from("roadtrip_items").update(payload).eq("id", id);
+      if(error){ console.warn(error); alert("Update fehlgeschlagen."); return; }
+    }
+    async function deleteItem(id){
+      const { error } = await supabase.from("roadtrip_items").delete().eq("id", id);
+      if(error){ console.warn(error); alert("Löschen fehlgeschlagen."); return; }
+    }
+
+    function setAuthUI(user){
+      const badge = document.getElementById("authBadge");
+      const btnLogout = document.getElementById("btnLogout");
+      const note = document.getElementById("authNote");
+
+      if(user){
+        badge.textContent = `✅ Eingeloggt: ${user.email}`;
+        btnLogout.style.display = "inline-flex";
+        note.textContent = "Ihr könnt jetzt beide Items hinzufügen, bearbeiten und löschen.";
+      }else{
+        badge.textContent = "🔒 Nicht eingeloggt";
+        btnLogout.style.display = "none";
+        note.textContent = "E-Mail eingeben → Magic-Link → danach könnt ihr das Board editieren.";
+      }
+    }
+
+    async function initAuth(){
+      if(!supabase){
+        setAuthUI(null);
+        document.getElementById("authBadge").textContent = "⚠️ Supabase nicht konfiguriert";
+        return;
+      }
+
+      const { data } = await supabase.auth.getSession();
+      sessionUser = data?.session?.user || null;
+      setAuthUI(sessionUser);
+
+      supabase.auth.onAuthStateChange((_event, sess) => {
+        sessionUser = sess?.user || null;
+        setAuthUI(sessionUser);
+        // reload items after login/out
+        loadItems();
+      });
+    }
+
+    document.getElementById("btnLogin").addEventListener("click", async () => {
+      if(!supabase){
+        alert("Supabase ist noch nicht konfiguriert (URL/Key).");
+        return;
+      }
+      const email = document.getElementById("email").value.trim();
+      if(!email){ alert("Bitte E-Mail eintragen."); return; }
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.href }
+      });
+
+      if(error){
+        console.warn(error);
+        alert("Login-Link konnte nicht gesendet werden.");
+        return;
+      }
+      alert("✅ Magic-Link ist raus! Öffne den Link aus deiner Mail – dann bist du eingeloggt.");
+    });
+
+    document.getElementById("btnLogout").addEventListener("click", async () => {
+      if(!supabase) return;
+      await supabase.auth.signOut();
+    });
+
+    function initRealtime(){
+      if(!supabase) return;
+
+      supabase
+        .channel("roadtrip_items_changes")
+        .on("postgres_changes", { event:"*", schema:"public", table:"roadtrip_items" }, payload => {
+          // Einfach neu laden -> simpel & stabil
+          loadItems();
+        })
+        .subscribe();
+    }
+
+    /***********************
+     * 8) BOOT
+     ***********************/
+    (async function boot(){
+      // defaults
+      document.getElementById("statIdeas").textContent = "Ideen: 0";
+
+      await initAuth();
+      await loadItems();
+      initRealtime();
+    })();
   </script>
 </body>
 </html>
