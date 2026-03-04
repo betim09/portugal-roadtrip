@@ -774,8 +774,46 @@
      * 8) Edit Code UI
      ***********************/
     const badge = document.getElementById("authBadge");
-    const btnEnable = document.getElementById("btnEnableEdit");
-    const btnDisable = document.getElementById("btnDisableEdit");
+    /***********************
+ * 8) Edit Code UI (AUTO)
+ ***********************/
+const badge = document.getElementById("authBadge");
+const inputCode = document.getElementById("editCode");
+const note = document.getElementById("authNote");
+
+function setEditUI(on){
+  editEnabled = on;
+  if(on){
+    badge.textContent = "🔓 Edit aktiviert";
+    note.textContent = "Edit ist aktiv. Ihr könnt jetzt hinzufügen, bearbeiten und löschen.";
+  }else{
+    badge.textContent = "🔒 Read-only";
+    note.textContent = "Seite ist öffentlich lesbar. Bearbeiten geht nur mit eurem gemeinsamen Code.";
+  }
+}
+
+// Auto-check bei jeder Eingabe (mit kleinem Debounce)
+let _t = null;
+function handleCodeChange(){
+  clearTimeout(_t);
+  _t = setTimeout(() => {
+    const code = (inputCode.value || "").trim();
+
+    if(code === REQUIRED_EDIT_CODE){
+      currentEditCode = code;
+      setEditUI(true);
+    }else{
+      currentEditCode = "";
+      setEditUI(false);
+    }
+  }, 120);
+}
+
+inputCode.addEventListener("input", handleCodeChange);
+inputCode.addEventListener("paste", handleCodeChange);
+inputCode.addEventListener("keydown", (e) => {
+  if(e.key === "Enter") handleCodeChange();
+});
     const inputCode = document.getElementById("editCode");
     const note = document.getElementById("authNote");
 
@@ -832,3 +870,4 @@
   </script>
 </body>
 </html>
+
