@@ -67,7 +67,7 @@
     h1{margin:0;font-size:clamp(28px,3.2vw,44px);line-height:1.05;letter-spacing:-0.02em}
     .subtitle{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
     .controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;align-items:center}
-    button, .pill, input, select, textarea{
+    button, input, select, textarea{
       border:1px solid rgba(255,255,255,0.14);
       background:rgba(255,255,255,0.06);
       color:var(--text);
@@ -131,7 +131,6 @@
       background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.82)
     }
 
-    /* Board */
     .board-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
     .board-tools input, .board-tools select{padding:10px 12px}
     .board-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
@@ -162,7 +161,6 @@
     .btn-good:hover{background:rgba(57,255,170,0.16);border-color:rgba(57,255,170,0.45)}
     .small-note{color:var(--muted2);font-size:11px;line-height:1.5;margin-top:10px}
 
-    /* Modal */
     .modal-backdrop{
       position:fixed;inset:0;background:rgba(0,0,0,0.55);
       display:none;align-items:center;justify-content:center;z-index:9999;
@@ -217,14 +215,13 @@
     </header>
 
     <div class="grid">
-      <!-- MAP -->
       <section class="card">
         <div class="card-head">
           <div class="card-title">
             <strong>Interaktive Karte</strong>
             <span>Route + Pins • Board-Items tauchen auch in den Popups auf</span>
           </div>
-          <div class="badge" id="authBadge">🔒 Read-only</div>
+          <div class="badge" id="authBadge">🔓 Offen</div>
         </div>
         <div id="map"></div>
         <div class="map-foot">
@@ -238,35 +235,21 @@
         </div>
       </section>
 
-      <!-- SIDE PANEL -->
       <aside class="card">
         <div class="card-head">
           <div class="card-title">
             <strong>Stops + Ideenboard</strong>
-            <span>Unterkünfte als Bases • Gemeinsam editierbar per Code</span>
+            <span>Unterkünfte als Bases • Direkt offen</span>
           </div>
           <button class="btn-small btn-good" id="btnAdd">➕ Idee hinzufügen</button>
         </div>
 
         <div class="panel">
-          <!-- CODE ACCESS -->
-          <div class="section">
-            <strong style="font-size:13px;">Edit-Code (kein Login nötig)</strong>
-            <div class="board-tools" style="margin-top:10px">
-              <input id="editCode" type="password" placeholder="Gemeinsamer Code (z.B. PT-ROADTRIP-2026)" style="flex:1;min-width:220px;border-radius:14px;font-weight:800">
-            </div>
-            <div class="small-note" id="authNote">
-              Seite ist öffentlich lesbar. Tippt den Code → Edit wird automatisch aktiviert.
-            </div>
-          </div>
-
-          <!-- TIMELINE -->
           <div class="section">
             <strong style="font-size:13px;">Bases (klick zum Zoomen)</strong>
             <div class="timeline" id="timeline"></div>
           </div>
 
-          <!-- BOARD -->
           <div class="section">
             <strong style="font-size:13px;">Ideenboard</strong>
             <div class="board-tools">
@@ -295,13 +278,12 @@
     </div>
   </div>
 
-  <!-- MODAL -->
   <div class="modal-backdrop" id="modalBackdrop">
     <div class="modal">
       <div class="modal-head">
         <div>
           <div style="font-weight:800">Idee / Hotel / Spot hinzufügen</div>
-          <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:4px" id="modalSub">Wird in Supabase gespeichert (Code-geschützt)</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:4px" id="modalSub">Wird in Supabase gespeichert</div>
         </div>
         <button class="btn-small btn-danger" id="btnClose">✕</button>
       </div>
@@ -359,10 +341,7 @@
      * 1) CONFIG
      ***********************/
     const SUPABASE_URL = "https://uhlisovcranwtcuwtqde.supabase.co";
-    const SUPABASE_ANON_KEY = "2d2637e5-9f6e-432c-89d9-764e2f7de6de";
-
-    // Muss exakt mit deiner Supabase Policy übereinstimmen!
-    const REQUIRED_EDIT_CODE = "PT-ROADTRIP-2026";
+    const SUPABASE_ANON_KEY = "sb_publishable_ofS72jPaQKpER9XbHZdxxw_y1orhvDT"; // aus API Keys
 
     const stops = [
       { id:"lisbon", name:"Lissabon", nights:"3 Nächte", vibe:"City, Food, Aussicht", coords:[38.7223,-9.1393], dayTrips:["Sintra","Belém","LX Factory","Miradouros"], note:"Auto hier möglichst stehen lassen (Parken/Verkehr)." },
@@ -378,9 +357,6 @@
      * 2) SUPABASE INIT
      ***********************/
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    let editEnabled = false;
-    let currentEditCode = "";
 
     /***********************
      * 3) MAP INIT + ROUTE
@@ -623,12 +599,10 @@
       }
 
       if(act === "edit"){
-        if(!editEnabled){ alert("🔒 Read-only. Code ist nicht korrekt."); return; }
         openModal("edit", it);
       }
 
       if(act === "del"){
-        if(!editEnabled){ alert("🔒 Read-only. Code ist nicht korrekt."); return; }
         const ok = confirm("Wirklich löschen?");
         if(!ok) return;
         await deleteItem(it.id);
@@ -666,30 +640,20 @@
 
     function closeModal(){ modalBackdrop.style.display = "none"; }
 
-    btnAdd.addEventListener("click", () => {
-      if(!editEnabled){
-        alert("🔒 Read-only. Code ist nicht korrekt.");
-        return;
-      }
-      openModal("add");
-    });
+    btnAdd.addEventListener("click", () => openModal("add"));
     btnClose.addEventListener("click", closeModal);
     modalBackdrop.addEventListener("click", (e) => { if(e.target === modalBackdrop) closeModal(); });
 
     btnSave.addEventListener("click", async () => {
-      if(!editEnabled){
-        alert("🔒 Read-only. Code ist nicht korrekt.");
-        return;
-      }
       const payload = {
         base: document.getElementById("mBase").value,
         category: document.getElementById("mCat").value,
         title: document.getElementById("mTitle").value.trim(),
         url: document.getElementById("mUrl").value.trim() || null,
         image_url: document.getElementById("mImg").value.trim() || null,
-        notes: document.getElementById("mNotes").value.trim() || null,
-        edit_code: currentEditCode
+        notes: document.getElementById("mNotes").value.trim() || null
       };
+
       if(!payload.title){
         alert("Bitte einen Titel eingeben.");
         return;
@@ -702,10 +666,6 @@
     });
 
     btnDelete.addEventListener("click", async () => {
-      if(!editEnabled){
-        alert("🔒 Read-only. Code ist nicht korrekt.");
-        return;
-      }
       const ok = confirm("Wirklich löschen?");
       if(!ok) return;
       await deleteItem(editingId);
@@ -740,21 +700,21 @@
       const { error } = await supabase.from("roadtrip_items").insert(payload);
       if(error){
         console.warn(error);
-        alert("Speichern fehlgeschlagen (Edit-Code korrekt? / Supabase Policy?).\n\n" + prettyDbError(error));
+        alert("Speichern fehlgeschlagen.\n\n" + prettyDbError(error));
       }
     }
     async function updateItem(id, payload){
       const { error } = await supabase.from("roadtrip_items").update(payload).eq("id", id);
       if(error){
         console.warn(error);
-        alert("Update fehlgeschlagen (Edit-Code korrekt? / Supabase Policy?).\n\n" + prettyDbError(error));
+        alert("Update fehlgeschlagen.\n\n" + prettyDbError(error));
       }
     }
     async function deleteItem(id){
       const { error } = await supabase.from("roadtrip_items").delete().eq("id", id);
       if(error){
         console.warn(error);
-        alert("Löschen fehlgeschlagen (Edit-Code korrekt? / Supabase Policy?).\n\n" + prettyDbError(error));
+        alert("Löschen fehlgeschlagen.\n\n" + prettyDbError(error));
       }
     }
 
@@ -766,56 +726,13 @@
     }
 
     /***********************
-     * 8) Edit Code UI (AUTO)
-     ***********************/
-    const badge = document.getElementById("authBadge");
-    const inputCode = document.getElementById("editCode");
-    const note = document.getElementById("authNote");
-
-    function setEditUI(on){
-      editEnabled = on;
-      if(on){
-        badge.textContent = "🔓 Edit aktiviert";
-        note.textContent = "Edit ist aktiv. Ihr könnt jetzt hinzufügen, bearbeiten und löschen.";
-      }else{
-        badge.textContent = "🔒 Read-only";
-        note.textContent = "Seite ist öffentlich lesbar. Tippt den Code → Edit wird automatisch aktiviert.";
-      }
-    }
-
-    // Auto-check (debounced)
-    let _t = null;
-    function handleCodeChange(){
-      clearTimeout(_t);
-      _t = setTimeout(() => {
-        const code = (inputCode.value || "").trim();
-
-        if(code === REQUIRED_EDIT_CODE){
-          currentEditCode = code;
-          setEditUI(true);
-        }else{
-          currentEditCode = "";
-          setEditUI(false);
-        }
-      }, 120);
-    }
-
-    inputCode.addEventListener("input", handleCodeChange);
-    inputCode.addEventListener("paste", handleCodeChange);
-    inputCode.addEventListener("keydown", (e) => {
-      if(e.key === "Enter") handleCodeChange();
-    });
-
-    /***********************
-     * 9) BOOT
+     * 8) BOOT
      ***********************/
     (async function boot(){
       document.getElementById("statIdeas").textContent = "Ideen: 0";
-      setEditUI(false);
       await loadItems();
       initRealtime();
     })();
   </script>
 </body>
 </html>
-
