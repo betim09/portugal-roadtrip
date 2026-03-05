@@ -19,7 +19,7 @@
   ></script>
 
   <!-- Supabase JS v2 (UMD Bundle für Browser) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -81,6 +81,14 @@
     button:hover{transform:translateY(-1px);background:rgba(255,255,255,0.09);border-color:rgba(255,255,255,0.18)}
     input, select{outline:none}
     textarea{border-radius:16px;font-weight:500;font-size:13px;resize:vertical;min-height:90px}
+
+    /* ✅ Dropdown Fix: Optionen immer lesbar */
+    select{color:var(--text)}
+    option{
+      color:#ffffff;
+      background:#0b1022;
+    }
+
     .grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-top:14px}
     @media(max-width:980px){.grid{grid-template-columns:1fr}header{flex-direction:column;align-items:flex-start}.controls{justify-content:flex-start}}
     .card{
@@ -167,7 +175,7 @@
       padding:18px;
     }
     .modal{
-      width:min(720px, 100%);
+      width:min(760px, 100%);
       background:rgba(255,255,255,0.08);
       border:1px solid rgba(255,255,255,0.14);
       border-radius:22px;
@@ -185,6 +193,23 @@
     .field textarea{border-radius:14px}
     .hint{font-size:11px;color:var(--muted2);margin-top:6px}
 
+    .img-preview{
+      width:100%;
+      max-height:260px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,0.14);
+      overflow:hidden;
+      background:rgba(0,0,0,0.25);
+      display:none;
+      cursor:pointer;
+    }
+    .img-preview img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
     .leaflet-control-attribution{
       background:rgba(0,0,0,0.35)!important;color:rgba(255,255,255,0.7)!important;
       border-radius:10px!important;border:1px solid rgba(255,255,255,0.10)!important;
@@ -200,10 +225,12 @@
         <div class="badge-row">
           <div class="badge"><span class="dot"></span> Flug: Memmingen → Lissabon • Rückflug: Faro → Memmingen</div>
           <div class="badge">Route: Lissabon → Faro • Map + gemeinsames Ideenboard</div>
+          <div class="badge" id="whoBadge">👤 Du: —</div>
+          <button class="btn-small" id="btnChangeName" title="Name ändern">✏️ Name ändern</button>
         </div>
         <h1>Portugal Roadtrip</h1>
         <p class="subtitle">
-          Klickt die Stops an, plant Tagestrips – und packt eure Hotel-Links, Spots, Fotos & Ideen direkt ins Board.
+          Klickt die Stops an, plant Tagestrips – und packt eure Hotel-Links, Spots, <b>Fotos</b> & Ideen direkt ins Board.
         </p>
       </div>
 
@@ -231,7 +258,7 @@
             <div class="stat" id="statStops">Stops: 5</div>
             <div class="stat" id="statIdeas">Ideen: —</div>
           </div>
-          <div class="stat">Tipp: Für Fotos am besten eine <b>direkte Bild-URL</b> nutzen.</div>
+          <div class="stat">Tipp: Fotos kannst du jetzt <b>direkt hochladen</b> (oder optional URL nutzen).</div>
         </div>
       </section>
 
@@ -282,13 +309,19 @@
     <div class="modal">
       <div class="modal-head">
         <div>
-          <div style="font-weight:800">Idee / Hotel / Spot hinzufügen</div>
+          <div style="font-weight:800" id="modalTitle">Idee / Hotel / Spot hinzufügen</div>
           <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:4px" id="modalSub">Wird in Supabase gespeichert</div>
         </div>
         <button class="btn-small btn-danger" id="btnClose">✕</button>
       </div>
 
       <div class="modal-body">
+        <div class="field full">
+          <label>Erstellt von</label>
+          <input id="mAuthor" disabled style="border-radius:14px;font-weight:800;opacity:.9">
+          <div class="hint">Name wird pro Gerät gemerkt (oben „Name ändern“)</div>
+        </div>
+
         <div class="field">
           <label>Base</label>
           <select id="mBase"></select>
@@ -318,9 +351,22 @@
         </div>
 
         <div class="field">
-          <label>Foto-URL (optional)</label>
+          <label>Foto hochladen (optional)</label>
+          <input id="mFile" type="file" accept="image/*" style="border-radius:14px;font-weight:700">
+          <div class="hint">Wird in Supabase Storage gespeichert</div>
+        </div>
+
+        <div class="field full">
+          <label>…oder Foto-URL (optional)</label>
           <input id="mImg" placeholder="https://...jpg/png" style="border-radius:14px;font-weight:700">
-          <div class="hint">Am besten eine direkte Bild-URL (oder Share-Link, der als Bild lädt)</div>
+          <div class="hint">Falls jemand lieber eine URL nutzen will</div>
+        </div>
+
+        <div class="field full">
+          <div class="img-preview" id="imgPreview" title="Bild öffnen">
+            <img id="imgPreviewEl" alt="">
+          </div>
+          <div class="hint" id="imgPreviewHint" style="display:none">Klick aufs Bild = öffnet es groß</div>
         </div>
 
         <div class="field full">
@@ -341,7 +387,9 @@
      * 1) CONFIG
      ***********************/
     const SUPABASE_URL = "https://uhlisovcranwtcuwtqde.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_ofS72jPaQKpER9XbHZdxxw_y1orhvDT"; // aus API Keys
+    const SUPABASE_ANON_KEY = "sb_publishable_ofS72jPaQKpER9XbHZdxxw_y1orhvDT";
+    const STORAGE_BUCKET = "roadtrip-images";
+    const AUTHOR_KEY = "rt_author_name_v1";
 
     const stops = [
       { id:"lisbon", name:"Lissabon", nights:"3 Nächte", vibe:"City, Food, Aussicht", coords:[38.7223,-9.1393], dayTrips:["Sintra","Belém","LX Factory","Miradouros"], note:"Auto hier möglichst stehen lassen (Parken/Verkehr)." },
@@ -357,10 +405,40 @@
      * 2) SUPABASE INIT
      ***********************/
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log("Supabase client:", sb);
 
     /***********************
-     * 3) MAP INIT + ROUTE
+     * 3) Author (Name pro Gerät)
+     ***********************/
+    function getAuthorName(){
+      return (localStorage.getItem(AUTHOR_KEY) || "").trim();
+    }
+    function setAuthorName(name){
+      localStorage.setItem(AUTHOR_KEY, (name||"").trim());
+      updateAuthorUI();
+    }
+    function ensureAuthorName(){
+      let name = getAuthorName();
+      if(!name){
+        name = (prompt("Wie heißt du? (wird auf diesem Gerät gespeichert)") || "").trim();
+        if(!name) name = "Gast";
+        setAuthorName(name);
+      }
+    }
+    function updateAuthorUI(){
+      const name = getAuthorName() || "—";
+      document.getElementById("whoBadge").textContent = `👤 Du: ${name}`;
+      const mAuthor = document.getElementById("mAuthor");
+      if(mAuthor) mAuthor.value = name;
+    }
+
+    document.getElementById("btnChangeName").addEventListener("click", () => {
+      const current = getAuthorName() || "";
+      const name = (prompt("Name ändern (wird auf diesem Gerät gespeichert):", current) || "").trim();
+      if(name) setAuthorName(name);
+    });
+
+    /***********************
+     * 4) MAP INIT + ROUTE
      ***********************/
     const map = L.map("map", { zoomControl:true, scrollWheelZoom:true }).setView([38.5,-9.2], 6);
 
@@ -394,6 +472,13 @@
 
     function esc(s){ return (s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
 
+    function fmtWhen(iso){
+      if(!iso) return "";
+      const d = new Date(iso);
+      if(Number.isNaN(d.getTime())) return "";
+      return d.toLocaleString("de-DE", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
+    }
+
     let allItems = [];
 
     function itemsForBase(baseName){
@@ -404,8 +489,9 @@
       const items = itemsForBase(stop.name);
       const list = items.slice(0,6).map(it => {
         const link = it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">Link</a>` : "";
-        return `<div style="font-size:12px;opacity:.9;margin:6px 0">
-          <b>${esc(it.category)}</b> — ${esc(it.title)} ${link ? "• " + link : ""}
+        const who = it.author_name ? ` • <span style="opacity:.85">von <b>${esc(it.author_name)}</b></span>` : "";
+        return `<div style="font-size:12px;opacity:.92;margin:6px 0">
+          <b>${esc(it.category)}</b> — ${esc(it.title)} ${link ? "• " + link : ""}${who}
         </div>`;
       }).join("");
 
@@ -485,7 +571,7 @@
     });
 
     /***********************
-     * 4) UI: Timeline + Filters
+     * 5) UI: Timeline + Filters
      ***********************/
     const timelineEl = document.getElementById("timeline");
     timelineEl.innerHTML = stops.map((s,i) => `
@@ -526,7 +612,7 @@
     searchEl.addEventListener("input", renderBoard);
 
     /***********************
-     * 5) Board render
+     * 6) Board render
      ***********************/
     const boardEl = document.getElementById("board");
     const boardHint = document.getElementById("boardHint");
@@ -538,10 +624,15 @@
       if(b !== "all" && it.base !== b) return false;
       if(c !== "all" && it.category !== c) return false;
       if(q){
-        const hay = `${it.base} ${it.category} ${it.title} ${it.notes||""} ${it.url||""}`.toLowerCase();
+        const hay = `${it.base} ${it.category} ${it.title} ${it.notes||""} ${it.url||""} ${it.author_name||""}`.toLowerCase();
         if(!hay.includes(q)) return false;
       }
       return true;
+    }
+
+    function pickImageUrl(it){
+      // bevorzugt gespeicherte URL (aus Upload oder manuell)
+      return it.image_url || "";
     }
 
     function renderBoard(){
@@ -550,9 +641,13 @@
 
       boardHint.style.display = items.length ? "none" : "block";
       boardEl.innerHTML = items.map(it => {
-        const img = it.image_url ? `<img src="${esc(it.image_url)}" alt="">` : `<span>📌</span>`;
+        const imgUrl = pickImageUrl(it);
+        const img = imgUrl ? `<img src="${esc(imgUrl)}" alt="">` : `<span>📌</span>`;
         const link = it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">öffnen</a>` : "";
         const notes = it.notes ? esc(it.notes) : "";
+        const who = it.author_name ? `<span style="opacity:.9"> • von <b>${esc(it.author_name)}</b></span>` : "";
+        const when = it.created_at ? `<span style="opacity:.75"> • ${esc(fmtWhen(it.created_at))}</span>` : "";
+
         return `
           <div class="item" data-id="${esc(it.id)}">
             <div class="item-left">
@@ -562,13 +657,14 @@
                 <div class="meta">
                   <b>${esc(it.base)}</b> • ${esc(it.category)}
                   ${link ? ` • ${link}` : ""}
+                  ${who}${when}
                   ${notes ? `<div style="margin-top:6px;opacity:.9">${notes}</div>` : ""}
                 </div>
               </div>
             </div>
             <div class="item-actions">
               <button class="btn-small" data-act="zoom">🗺️</button>
-              <button class="btn-small" data-act="edit">✏️</button>
+              <button class="btn-small" data-act="edit">ℹ️</button>
               <button class="btn-small btn-danger" data-act="del">🗑️</button>
             </div>
           </div>
@@ -606,12 +702,12 @@
       if(act === "del"){
         const ok = confirm("Wirklich löschen?");
         if(!ok) return;
-        await deleteItem(it.id);
+        await deleteItem(it);
       }
     });
 
     /***********************
-     * 6) Modal add/edit
+     * 7) Modal add/edit
      ***********************/
     const modalBackdrop = document.getElementById("modalBackdrop");
     const btnAdd = document.getElementById("btnAdd");
@@ -619,21 +715,43 @@
     const btnSave = document.getElementById("btnSave");
     const btnDelete = document.getElementById("btnDelete");
 
+    const imgPreview = document.getElementById("imgPreview");
+    const imgPreviewEl = document.getElementById("imgPreviewEl");
+    const imgPreviewHint = document.getElementById("imgPreviewHint");
+
     let modalMode = "add";
     let editingId = null;
 
+    function setImagePreview(url){
+      if(url){
+        imgPreviewEl.src = url;
+        imgPreview.style.display = "block";
+        imgPreviewHint.style.display = "block";
+        imgPreview.onclick = () => window.open(url, "_blank");
+      }else{
+        imgPreviewEl.src = "";
+        imgPreview.style.display = "none";
+        imgPreviewHint.style.display = "none";
+        imgPreview.onclick = null;
+      }
+    }
+
     function setModalFields(it){
+      document.getElementById("mAuthor").value = getAuthorName() || "—";
       document.getElementById("mBase").value = it?.base || BASE_NAMES[0];
       document.getElementById("mCat").value = it?.category || "Hotel";
       document.getElementById("mTitle").value = it?.title || "";
       document.getElementById("mUrl").value = it?.url || "";
       document.getElementById("mImg").value = it?.image_url || "";
       document.getElementById("mNotes").value = it?.notes || "";
+      document.getElementById("mFile").value = "";
+      setImagePreview(it?.image_url || "");
     }
 
     function openModal(mode, it=null){
       modalMode = mode;
       editingId = it?.id || null;
+      document.getElementById("modalTitle").textContent = (mode === "edit") ? "Info / Bearbeiten" : "Idee hinzufügen";
       setModalFields(it);
       btnDelete.style.display = (mode === "edit") ? "inline-flex" : "none";
       modalBackdrop.style.display = "flex";
@@ -645,14 +763,52 @@
     btnClose.addEventListener("click", closeModal);
     modalBackdrop.addEventListener("click", (e) => { if(e.target === modalBackdrop) closeModal(); });
 
+    function uuid(){
+      if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      return "id-" + Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
+    }
+
+    function extFromFile(file){
+      const n = (file?.name || "").toLowerCase();
+      const m = n.match(/\.(jpg|jpeg|png|webp|gif|heic)$/i);
+      return m ? m[1].toLowerCase() : "jpg";
+    }
+
+    async function uploadImage(file){
+      const id = uuid();
+      const ext = extFromFile(file);
+      const path = `roadtrip/${id}.${ext}`;
+
+      const { error: upErr } = await sb
+        .storage
+        .from(STORAGE_BUCKET)
+        .upload(path, file, { upsert: true, contentType: file.type });
+
+      if(upErr) throw upErr;
+
+      const { data } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+      const publicUrl = data?.publicUrl || null;
+
+      return { path, publicUrl };
+    }
+
+    async function deleteImageByPath(path){
+      if(!path) return;
+      const { error } = await sb.storage.from(STORAGE_BUCKET).remove([path]);
+      if(error) console.warn("Image delete failed:", error);
+    }
+
     btnSave.addEventListener("click", async () => {
+      const author = getAuthorName() || "Gast";
+
       const payload = {
         base: document.getElementById("mBase").value,
         category: document.getElementById("mCat").value,
         title: document.getElementById("mTitle").value.trim(),
         url: document.getElementById("mUrl").value.trim() || null,
         image_url: document.getElementById("mImg").value.trim() || null,
-        notes: document.getElementById("mNotes").value.trim() || null
+        notes: document.getElementById("mNotes").value.trim() || null,
+        author_name: author
       };
 
       if(!payload.title){
@@ -660,27 +816,50 @@
         return;
       }
 
-      if(modalMode === "add") await insertItem(payload);
-      if(modalMode === "edit") await updateItem(editingId, payload);
+      // Datei-Upload hat Priorität
+      const file = document.getElementById("mFile").files?.[0] || null;
 
-      closeModal();
+      try{
+        if(file){
+          // falls edit: altes Bild ggf. löschen (best-effort)
+          if(modalMode === "edit"){
+            const existing = allItems.find(x => x.id === editingId);
+            if(existing?.image_path){
+              await deleteImageByPath(existing.image_path);
+            }
+          }
+
+          const up = await uploadImage(file);
+          payload.image_path = up.path;
+          payload.image_url = up.publicUrl; // wird direkt angezeigt
+        }
+
+        if(modalMode === "add") await insertItem(payload);
+        if(modalMode === "edit") await updateItem(editingId, payload);
+
+        closeModal();
+      }catch(err){
+        console.warn(err);
+        alert("Upload/Speichern fehlgeschlagen.\n\n" + prettyDbError(err));
+      }
     });
 
     btnDelete.addEventListener("click", async () => {
       const ok = confirm("Wirklich löschen?");
       if(!ok) return;
-      await deleteItem(editingId);
+      const it = allItems.find(x => x.id === editingId);
+      if(it) await deleteItem(it);
       closeModal();
     });
 
     /***********************
-     * 7) Supabase CRUD + Realtime
+     * 8) Supabase CRUD + Realtime
      ***********************/
     async function loadItems(){
       const { data, error } = await sb
-  .from("roadtrip_items")
-  .select("*")
-  .order("created_at", { ascending:false });
+        .from("roadtrip_items")
+        .select("*")
+        .order("created_at", { ascending:false });
 
       if(error){
         console.warn(error);
@@ -711,24 +890,33 @@
         alert("Update fehlgeschlagen.\n\n" + prettyDbError(error));
       }
     }
-    async function deleteItem(id){
-      const { error } = await sb.from("roadtrip_items").delete().eq("id", id);
+    async function deleteItem(item){
+      // erst DB löschen, dann Bild löschen (oder umgekehrt – hier DB first ist ok)
+      const { error } = await sb.from("roadtrip_items").delete().eq("id", item.id);
       if(error){
         console.warn(error);
         alert("Löschen fehlgeschlagen.\n\n" + prettyDbError(error));
+        return;
+      }
+      if(item.image_path){
+        await deleteImageByPath(item.image_path);
       }
     }
 
     function initRealtime(){
-  sb
-    .channel("roadtrip_items_changes")
-    .on("postgres_changes", { event:"*", schema:"public", table:"roadtrip_items" }, () => loadItems())
-    .subscribe();
-}
+      sb
+        .channel("roadtrip_items_changes")
+        .on("postgres_changes", { event:"*", schema:"public", table:"roadtrip_items" }, () => loadItems())
+        .subscribe();
+    }
+
     /***********************
-     * 8) BOOT
+     * 9) BOOT
      ***********************/
     (async function boot(){
+      ensureAuthorName();
+      updateAuthorUI();
+
       document.getElementById("statIdeas").textContent = "Ideen: 0";
       await loadItems();
       initRealtime();
@@ -736,7 +924,3 @@
   </script>
 </body>
 </html>
-
-
-
-
