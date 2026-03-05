@@ -676,10 +676,10 @@
      * 7) Supabase CRUD + Realtime
      ***********************/
     async function loadItems(){
-      const { data, error } = await supabase
-        .from("roadtrip_items")
-        .select("*")
-        .order("created_at", { ascending:false });
+      const { data, error } = await sb
+  .from("roadtrip_items")
+  .select("*")
+  .order("created_at", { ascending:false });
 
       if(error){
         console.warn(error);
@@ -736,5 +736,6 @@
   </script>
 </body>
 </html>
+
 
 
