@@ -357,6 +357,7 @@
      * 2) SUPABASE INIT
      ***********************/
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("Supabase client:", sb);
 
     /***********************
      * 3) MAP INIT + ROUTE
@@ -719,12 +720,11 @@
     }
 
     function initRealtime(){
-      supabase
-        .channel("roadtrip_items_changes")
-        .on("postgres_changes", { event:"*", schema:"public", table:"roadtrip_items" }, () => loadItems())
-        .subscribe();
-    }
-
+  sb
+    .channel("roadtrip_items_changes")
+    .on("postgres_changes", { event:"*", schema:"public", table:"roadtrip_items" }, () => loadItems())
+    .subscribe();
+}
     /***********************
      * 8) BOOT
      ***********************/
@@ -736,6 +736,7 @@
   </script>
 </body>
 </html>
+
 
 
 
