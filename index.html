@@ -356,7 +356,7 @@
     /***********************
      * 2) SUPABASE INIT
      ***********************/
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     /***********************
      * 3) MAP INIT + ROUTE
@@ -697,21 +697,21 @@
     }
 
     async function insertItem(payload){
-      const { error } = await supabase.from("roadtrip_items").insert(payload);
+      const { error } = await sb.from("roadtrip_items").insert(payload);
       if(error){
         console.warn(error);
         alert("Speichern fehlgeschlagen.\n\n" + prettyDbError(error));
       }
     }
     async function updateItem(id, payload){
-      const { error } = await supabase.from("roadtrip_items").update(payload).eq("id", id);
+      const { error } = await sb.from("roadtrip_items").update(payload).eq("id", id);
       if(error){
         console.warn(error);
         alert("Update fehlgeschlagen.\n\n" + prettyDbError(error));
       }
     }
     async function deleteItem(id){
-      const { error } = await supabase.from("roadtrip_items").delete().eq("id", id);
+      const { error } = await sb.from("roadtrip_items").delete().eq("id", id);
       if(error){
         console.warn(error);
         alert("Löschen fehlgeschlagen.\n\n" + prettyDbError(error));
@@ -736,4 +736,5 @@
   </script>
 </body>
 </html>
+
 
